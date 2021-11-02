@@ -50,8 +50,8 @@ do
     elif [ ${species} == mm10 ]
     then
         mainpath=${commpath}/rongbinzheng/Genome/mm10
-        fapath=${mainpath}/GRCm38.primary_assembly.genome.fa
-        gtfpath=${mainpath}/gencode.vM23.annotation.gtf
+        fapath=${mainpath}/GRCm39.primary_assembly.genome.fa
+        gtfpath=${mainpath}/gencode.vM27.annotation.gtf
         indexpath=${mainpath}/STAR_mm10
         salmon_index=${mainpath}/salmon_transcript_index
         rsem_ref=${mainpath}/rsem_ref/rsem_ref
@@ -157,12 +157,11 @@ rm -rf ${analysis}/STAR_output_STARtmp
 rm -rf ${QC}/val*fq
 rm -rf ${analysis}/*.toTranscriptome.out.bam 
 
-mv ${analysis}/STAR_outputLog.final.out > ${workpath}/result/${jobName}_STAR.stat
-
 ## ======= annotate genes =====
-python /lab-share/Cardio-Chen-e2/Public/rongbinzheng/CommonCode/rnaseq_output_merge.py ann_gene -t ${workpath}/result/${jobName}.gene.rsem.txt -s ${species}
-python /lab-share/Cardio-Chen-e2/Public/rongbinzheng/CommonCode/rnaseq_output_merge.py ann_gene -c ${workpath}/result/${jobName}.gene_count.txt -s ${species}
+python /lab-share/Cardio-Chen-e2/Public/rongbinzheng/CommonCode/merge_exp_mat.py ann_gene -t ${workpath}/result/${jobName}.gene.rsem.txt -s ${species}
+python /lab-share/Cardio-Chen-e2/Public/rongbinzheng/CommonCode/merge_exp_mat.py ann_gene -c ${workpath}/result/${jobName}.gene_count.txt -s ${species}
 
 echo '++++++ finished'
 """ > ${jobName}.sbatch
 done < $metasheet
+

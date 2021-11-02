@@ -97,8 +97,14 @@ plot_go <- function(GO, label, prefix){
 ## vocanoplot
 vocano_plot <- function(mat, prefix){
     plot_df = subset(mat, (!is.na(padj)) & (!is.na(log2FoldChange)))
-    plot_df$diff = (abs(plot_df$log2FoldChange) > log2(1.5)) & (plot_df$padj < 0.01)
-    plot_df$diff = factor(plot_df$diff, levels = c('TRUE', 'FALSE'))
+    # plot_df$diff = (abs(plot_df$log2FoldChange) > log2(1.5)) & (plot_df$padj < 0.01)
+    # plot_df$diff = factor(plot_df$diff, levels = c('TRUE', 'FALSE'))
+    plot_df$diff = 'Stable'
+    plot_df$diff[(plot_df$log2FoldChange > log2(2)) & (plot_df$padj < 0.05)] = 'Up'
+    plot_df$diff[(plot_df$log2FoldChange < -log2(2)) & (plot_df$padj < 0.05)] = 'Down'
+
+    plot_df$diff = factor(plot_df$diff, levels = c('Up', 'Stable', 'Down'))
+
     labels = rbind(head(plot_df[order(plot_df$stat),], 20), 
                     tail(plot_df[order(plot_df$stat),], 20))
 
@@ -113,7 +119,7 @@ vocano_plot <- function(mat, prefix){
             legend.text=element_text(size=10),
             plot.title = element_text(hjust=0.5,vjust = 0.5,
                                     margin = margin(l=100,r=50,t=10,b=10),face = "bold", colour = "black"))+
-            scale_colour_manual(values=c('TRUE'='red', 'FALSE'='grey'))+
+            scale_colour_manual(values=c('Up'='red', 'Stable'='grey', 'Down'='#1E90FF'))+
             geom_text_repel(data = labels, aes(x = log2FoldChange, y = -log10(padj), label = gene), colour = 'black')
     pdf(paste0(prefix, '_volcano.pdf'), width = 8)
     print(g)
@@ -138,6 +144,7 @@ for (comp in names(comparisons)) {
     if (file.exists(paste0(prefix, '_', comp, ".allgene.csv"))){
         diffexp_res <- read.csv(paste0(prefix, '_', comp, ".allgene.csv"), row.names = 1)
         diff_res[['allgene']][[comp]] <- diffexp_res
+        vocano_plot(mat=diffexp_res, prefix = paste0(prefix, '_', comp, '_allgene'))
         next
     }
     cond = DataFrame('cond'=comparisons[[comp]])
@@ -260,9 +267,13 @@ if (go == 'True'){
 if (gsea == "True"){
     print('+++++ GSEA')
     for (comp in names(diff_res$protein_only)){
+        print(comp)
         diffexp <- diff_res$protein_only[[comp]]
-        gageinput <- diffexp$log2FoldChange
-        names(gageinput) <- rownames(diffexp)
+        diffexp <- subset(diffexp, !is.na(log2FoldChange) & !is.na(padj))
+
+        ### using log2FoldChange
+        gageinput <- as.vector(diffexp$log2FoldChange)
+        names(gageinput) <- as.vector(rownames(diffexp))
         gageinput <- gageinput[!grepl('^mt-|MT-', names(gageinput))]
 
         geneid <- bitr(names(gageinput), fromType='SYMBOL', toType='ENTREZID', OrgDb=db, drop = TRUE)
@@ -274,8 +285,7 @@ if (gsea == "True"){
         gseainput = sort(gageinput, decreasing=TRUE)
         gseainput = gseainput[is.finite(gseainput)]
         print(species)
-        print(head(gseainput))
-        save.image('tmp.RData')
+        print(length(gseainput))
         fullgsea <- gseKEGG(geneList = gseainput,
                         organism= species,
                         nPerm= 1000,
@@ -286,7 +296,7 @@ if (gsea == "True"){
                         use_internal_data = FALSE)
         ## write out
         saveRDS(fullgsea, file = paste0(prefix, comp, '.gseaKEGG.rds'))
-        pdf(paste0(prefix, comp, '.gseaKEGG.pdf'), width = 10, height = 7.5)
+        pdf(paste0(prefix, comp, '.gseaKEGG.pdf'), width = 10, height = 8.5)
         g = dotplot(fullgsea, showCategory = 15, title = "Enriched Pathways" , split=".sign") + facet_grid(.~.sign)
         print(g)
         g = ridgeplot(fullgsea) + labs(x = "Enrichment Distribution")
