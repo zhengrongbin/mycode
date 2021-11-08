@@ -29,6 +29,22 @@ df_transcript_promoter_protein = df_transcript_promoter_protein.sort_values(['se
 df_transcript_promoter_protein.to_csv('gencode.v19.annotation.protein_coding.transcript_promoter_UpDown5Kb.csv', 
     index = None, header = None, sep = '\t')
 
+## CDS to gene length
+cds = df[df['feature'] == 'CDS']
+cds['location'] = cds['seqname']+'_'+cds['start'].astype('str')+'_'+cds['end'].astype('str')
+
+cds_length = {}
+
+def get_length(tmp):
+    tmp = tmp[~tmp.location.duplicated()]
+    tmp = tmp.sort_values('start')
+    return(sum(abs(tmp['start'] - tmp['end'])))
+
+gene_length = cds.groupby('gene_name')[['start', 'end', 'location']].apply(lambda df: get_length(df))
+gene_length = pd.DataFrame(gene_length, columns = ['CDS_bp'])
+gene_length.to_csv('gencode.v19.annotation.gene_cds_length.csv')
+
+
 ## ===== hg38
 df = read_gtf("gencode.v38.annotation.gtf")
 
