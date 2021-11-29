@@ -100,8 +100,8 @@ vocano_plot <- function(mat, prefix){
     # plot_df$diff = (abs(plot_df$log2FoldChange) > log2(1.5)) & (plot_df$padj < 0.01)
     # plot_df$diff = factor(plot_df$diff, levels = c('TRUE', 'FALSE'))
     plot_df$diff = 'Stable'
-    plot_df$diff[(plot_df$log2FoldChange > log2(2)) & (plot_df$padj < 0.05)] = 'Up'
-    plot_df$diff[(plot_df$log2FoldChange < -log2(2)) & (plot_df$padj < 0.05)] = 'Down'
+    plot_df$diff[(plot_df$log2FoldChange > log2(1.5)) & (plot_df$padj < 0.05)] = 'Up'
+    plot_df$diff[(plot_df$log2FoldChange < -log2(1.5)) & (plot_df$padj < 0.05)] = 'Down'
 
     plot_df$diff = factor(plot_df$diff, levels = c('Up', 'Stable', 'Down'))
 
@@ -205,8 +205,8 @@ if (go == 'True'){
         }else{
             diffexp = diff_res$allgene[[comp]]
         }
-        up = subset(diffexp, log2FoldChange >= log2(2) & padj <= 0.05)
-        down = subset(diffexp, log2FoldChange <= -log2(2) & padj <= 0.05)
+        up = subset(diffexp, log2FoldChange >= log2(1.5) & padj <= 0.05)
+        down = subset(diffexp, log2FoldChange <= -log2(1.5) & padj <= 0.05)
         if (nrow(up) != 0){
             if (file.exists(file = paste0(prefix, '_', comp, ".GO_UP.rds"))){
                 up_go_res = readRDS(file = paste0(prefix, '_', comp, ".GO_UP.rds"))
