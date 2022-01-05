@@ -6,6 +6,8 @@ docker run -it --name routine -p 8888:8888 -v /Users/rongbinzheng/Documents:/Use
 ## for MECOM
 docker run -it --name MECOM -p 8880:8880 -v /Users/rongbinzheng/Documents/BCH/ChenLab:/home/ChenLab -v /Users/rongbinzheng/Documents/CommonData:/home/CommonData seurat:v2.0.1
 
+## for compass
+docker run -it --name compass -p 8880:8880 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents  compass:latest
 
 jupyter notebook --allow-root --port=8888 --no-browser --ip=0.0.0.0
 
@@ -21,7 +23,7 @@ srun -A bch -p bch-interactive --pty /bin/bash
 
 ### ========== MGHPCC ========== 
 ## interactive
-srun -A bch-mghpcc --pty /bin/bash
+srun -A bch-mghpcc -p bch-interactive-mghpcc --pty /bin/bash
 
 
 http://dc2.cistrome.org/batchview/h/44908_45015_44995_62395_3149_3217_3123_3142_3147_44906_47605/w/
@@ -151,17 +153,108 @@ meta_path=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/scRNA_BAT/mouse/cold7_me
 prefix=BAT_cold7
 
 
+### cellranger
+gsm=GSM4875674
+ref_data=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/Genome/mm10/cellranger/cellranger/mm10/
+fastq_path=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/scRNA_BAT/mouse/raw_data/sra
+
+cellranger count --id=${gsm} --transcriptome=${ref_data} --fastqs=${fastq_path}/${gsm} --sample=${gsm} --localcores 1 --r1-length 24
 
 
 
+path = 'GSM4875676/GSM4875676_S1_L001_R1_001.fastq.gz'
+a_file = gzip.open(path, 'rb')
+length = []
+for i in a_file:
+    length.extend(re.findall('length=[0-9]*', i.decode('utf8').rstrip()))
 
 
 
+### build singularity container from docker ones, in e2
+module load singularity
+singularity build --sandbox compass docker-archive://compass_installed.tar
+
+singularity run /lab-share/Cardio-Chen-e2/Public/rongbinzheng/tmp/compass sh /lab-share/Cardio-Chen-e2/Public/rongbinzheng/metabolism/test_compass/compass_run_meta.sh /lab-share/Cardio-Chen-e2/Public/rongbinzheng/metabolism/test_compass/HNSC_GSE103322_expression.tsv homo_sapiens /lab-share/Cardio-Chen-e2/Public/rongbinzheng/metabolism/test_compass/HNSC_GSE103322_compass_metabolite temp_comp3 14
 
 
+## merge 
+import os,sys
+import pandas as pd
+path = 'temp_comp3/'
+samples = {x:os.path.join(path, x) for x in os.listdir(path) if x.startswith('sample')}
+reactions = pd.DataFrame()
+for s in samples:
+    if not os.path.exists(os.path.join(samples[s], 'uptake.txt')):
+        continue
+    tmp = pd.read_csv(os.path.join(samples[s], 'uptake.txt'), index_col = 0, sep = '\t')
+    reactions = pd.concat([reactions, tmp], axis = 1)
+
+reactions.to_csv('HNSC_compass_uptake_result.csv')
+
+## merge for CCLE compass
+import os,sys
+import pandas as pd
+path = 'ccle_c1_temp'
+samples = {x:os.path.join(path, x) for x in os.listdir(path) if x.startswith('sample')}
+secretions = pd.DataFrame()
+reactions = pd.DataFrame()
+uptake = pd.DataFrame()
+for s in samples:
+    if not os.path.exists(os.path.join(samples[s], 'uptake.txt')):
+        continue
+    tmp = pd.read_csv(os.path.join(samples[s], 'uptake.txt'), index_col = 0, sep = '\t')
+    uptake = pd.concat([uptake, tmp], axis = 1)
+    if not os.path.exists(os.path.join(samples[s], 'secretions.txt')):
+        continue
+    tmp = pd.read_csv(os.path.join(samples[s], 'secretions.txt'), index_col = 0, sep = '\t')
+    secretions = pd.concat([secretions, tmp], axis = 1)
+    if not os.path.exists(os.path.join(samples[s], 'reactions.txt')):
+        continue
+    tmp = pd.read_csv(os.path.join(samples[s], 'reactions.txt'), index_col = 0, sep = '\t')
+    reactions = pd.concat([reactions, tmp], axis = 1)
+
+path = 'ccle_c2_temp'
+samples = {x:os.path.join(path, x) for x in os.listdir(path) if x.startswith('sample')}
+for s in samples:
+    if not os.path.exists(os.path.join(samples[s], 'uptake.txt')):
+        continue
+    tmp = pd.read_csv(os.path.join(samples[s], 'uptake.txt'), index_col = 0, sep = '\t')
+    uptake = pd.concat([uptake, tmp], axis = 1)
+    if not os.path.exists(os.path.join(samples[s], 'secretions.txt')):
+        continue
+    tmp = pd.read_csv(os.path.join(samples[s], 'secretions.txt'), index_col = 0, sep = '\t')
+    secretions = pd.concat([secretions, tmp], axis = 1)
+    if not os.path.exists(os.path.join(samples[s], 'reactions.txt')):
+        continue
+    tmp = pd.read_csv(os.path.join(samples[s], 'reactions.txt'), index_col = 0, sep = '\t')
+    reactions = pd.concat([reactions, tmp], axis = 1)
 
 
+path = 'ccle_c3_temp'
+samples = {x:os.path.join(path, x) for x in os.listdir(path) if x.startswith('sample')}
+for s in samples:
+    if not os.path.exists(os.path.join(samples[s], 'uptake.txt')):
+        continue
+    tmp = pd.read_csv(os.path.join(samples[s], 'uptake.txt'), index_col = 0, sep = '\t')
+    uptake = pd.concat([uptake, tmp], axis = 1)
+    if not os.path.exists(os.path.join(samples[s], 'secretions.txt')):
+        continue
+    tmp = pd.read_csv(os.path.join(samples[s], 'secretions.txt'), index_col = 0, sep = '\t')
+    secretions = pd.concat([secretions, tmp], axis = 1)
+    if not os.path.exists(os.path.join(samples[s], 'reactions.txt')):
+        continue
+    tmp = pd.read_csv(os.path.join(samples[s], 'reactions.txt'), index_col = 0, sep = '\t')
+    reactions = pd.concat([reactions, tmp], axis = 1)
 
+uptake.to_csv('CCLE_Compass_uptake.csv')
+secretions.to_csv('CCLE_Compass_secretions.csv')
+reactions.to_csv('CCLE_Compass_reactions.csv')
+
+
+## 
+ccle = pd.read_csv('CCLE_expression_clean.csv', index_col = 0)
+remain = ccle.loc[:,~ccle.columns.isin(reactions.columns)]
+remain.to_csv('ccle_remain.tsv', sep = '\t')
 
 
 
