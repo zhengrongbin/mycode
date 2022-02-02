@@ -13,7 +13,18 @@ jupyter notebook --allow-root --port=8888 --no-browser --ip=0.0.0.0
 
 remotes::install_version(package = 'Seurat', version = package_version('2.0.1'))
 
+## E2
+jupyter notebook --no-browser --port 8900 --NotebookApp.iopub_data_rate_limit=10000000000 --ip=0.0.0.0 --NotebookApp.allow_origin=* --allow-root
 
+ssh -N -L 8900:compute-0-4.tch.harvard.edu:8900 -o ServerAliveInterval=30 ch228298@e2.tch.harvard.edu
+
+## mghpcc
+## in mghpcc run:
+jupyter notebook --no-browser --port 8900 --NotebookApp.iopub_data_rate_limit=10000000000 --ip=0.0.0.0 --NotebookApp.allow_origin=* --allow-root
+## in e2 run:
+ssh -f -L 8900:compute-m7c1-0-3:8900 ch210487@bch-mghpcc.rc.fas.harvard.edu -N
+
+##
 mkdir /lab-share/Cardio-Chen-e2/Public/rongbinzheng/google_drive
 rclone mount google-drive:~/ /project/RC_Cardio-Chen-e2/rongbinzheng/google_drive --allow-other --allow-non-empty --vfs-cache-mode writes
 
@@ -251,10 +262,6 @@ secretions.to_csv('CCLE_Compass_secretions.csv')
 reactions.to_csv('CCLE_Compass_reactions.csv')
 
 
-## 
-ccle = pd.read_csv('CCLE_expression_clean.csv', index_col = 0)
-remain = ccle.loc[:,~ccle.columns.isin(reactions.columns)]
-remain.to_csv('ccle_remain.tsv', sep = '\t')
 
 
 
