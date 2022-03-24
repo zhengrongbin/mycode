@@ -167,7 +167,7 @@ gsea <- function(rank_genes, kegg_gmt_list, prefix){
     res = as.matrix(fgseaRes)
     res[,'leadingEdge'] = gsub(',', ';', as.vector(res[,'leadingEdge']))
     msg('save GSEA result')
-    write.csv(res, file = paste0(prefix, '_fgseaRes.csv'), quote = F, row.names = F)
+    write.table(res, file = paste0(prefix, '_fgseaRes.tsv'), quote = F, row.names = F, sep = '\t')   
     return(plot_df)
 }
 

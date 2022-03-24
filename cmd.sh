@@ -1,7 +1,7 @@
 docker pull ubuntu:latest   
 
 ## load whole document
-docker run -it --name routine -p 8888:8888 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents routine:latest
+docker run -it --name routine -p 8080:8080 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents routine:latest
 
 ## for MECOM
 docker run -it --name MECOM -p 8880:8880 -v /Users/rongbinzheng/Documents/BCH/ChenLab:/home/ChenLab -v /Users/rongbinzheng/Documents/CommonData:/home/CommonData seurat:v2.0.1
@@ -9,7 +9,11 @@ docker run -it --name MECOM -p 8880:8880 -v /Users/rongbinzheng/Documents/BCH/Ch
 ## for compass
 docker run -it --name compass -p 8880:8880 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents  compass:latest
 
-jupyter notebook --allow-root --port=8888 --no-browser --ip=0.0.0.0
+## for vue
+docker run -it --name vue -p 8880:8880 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents  vue:latest
+
+
+jupyter notebook --allow-root --port=8080 --no-browser --ip=0.0.0.0 
 
 remotes::install_version(package = 'Seurat', version = package_version('2.0.1'))
 
@@ -22,7 +26,7 @@ ssh -N -L 8900:compute-0-4.tch.harvard.edu:8900 -o ServerAliveInterval=30 ch2282
 ## in mghpcc run:
 jupyter notebook --no-browser --port 8900 --NotebookApp.iopub_data_rate_limit=10000000000 --ip=0.0.0.0 --NotebookApp.allow_origin=* --allow-root
 ## in e2 run:
-ssh -f -L 8900:compute-m7c1-0-3:8900 ch210487@bch-mghpcc.rc.fas.harvard.edu -N
+ssh -f -L 8900:compute-m7c1-0-4:8900 ch210487@bch-mghpcc.rc.fas.harvard.edu -N
 
 ##
 mkdir /lab-share/Cardio-Chen-e2/Public/rongbinzheng/google_drive
@@ -261,9 +265,14 @@ uptake.to_csv('CCLE_Compass_uptake.csv')
 secretions.to_csv('CCLE_Compass_secretions.csv')
 reactions.to_csv('CCLE_Compass_reactions.csv')
 
+## to gmt file
+out = open('kegg.gmt', 'w')
+for line in open('mouse_KEGG_terms_symbol.txt', 'r'):
+    line = line.rstrip().split('\t')
+    out.write('\t'.join([line[0], 'NA']+line[1].split(';'))+'\n')
 
 
 
 
-
+((adipose[Title/Abstract]) OR (adipocyte[Title/Abstract]) OR (adipocytes[Title/Abstract]) OR (BAT[Title/Abstract]) OR (WAT[Title/Abstract])) AND ((metabolite sensing[Title/Abstract]) OR (cross-talk[Title/Abstract]) OR (crosstalk[Title/Abstract]) OR (cell communication[Title/Abstract]) OR (cell-cell communication[Title/Abstract]) OR (cellular communication[Title/Abstract]) OR (metabolic communication[Title/Abstract]) OR (metabolite communication[Title/Abstract]) OR (paracrine[Title/Abstract]) OR (autocrine[Title/Abstract]) OR (angiocrine[Title/Abstract]))
 
