@@ -9,6 +9,7 @@ library('optparse')
 library('clusterProfiler')
 library("org.Mm.eg.db")
 library("org.Hs.eg.db")
+library('org.Dr.eg.db')
 
 option_list <- list(
     make_option(c("-c", "--count"), type = "character", default=TRUE,
@@ -20,7 +21,7 @@ option_list <- list(
     make_option(c("-e", "--gsea"), type = "character", default=FALSE,
               help="True or False, True for doing GSEA for the KEGG, False for no"),
     make_option(c("-s", "--species"), type = "character", default=FALSE,
-              help="species given by hsa for human, and mmu for mouse"),
+              help="species given by hsa for human, and mmu for mouse, fish for zebrafish"),
     make_option(c("-p", "--prefix"), type = "character", default=FALSE,
               help="the prefix of output"),
     make_option(c("-o", "--protein_coding"), type = "character", default=FALSE,
@@ -40,9 +41,12 @@ gsea <- opt$gsea
 
 if (species == 'hsa'){
     db = org.Hs.eg.db
-}else{
+}else if (species == 'mmu'){
     db = org.Mm.eg.db
     species = 'mmu'
+}else{
+    db = org.Dr.eg.db
+    species = 'dre'
 }
 
 if (prefix == FALSE){
@@ -66,6 +70,7 @@ enrichment_analysis <- function(geneset, background = 'all', species = 'hsa'){
     gene_map = bitr(geneset, fromType='SYMBOL', toType='ENTREZID', OrgDb=db, drop = TRUE)
     rownames(gene_map) = as.character(gene_map[,2])
     geneid = as.vector(gene_map[,2])
+    print(head(geneid))
     print('KEGG')
     if (background == 'all'){
         kegg_res = enrichKEGG(gene = geneid, organism=species, keyType='kegg', pvalueCutoff = 1, qvalueCutoff = 1)
@@ -80,8 +85,6 @@ enrichment_analysis <- function(geneset, background = 'all', species = 'hsa'){
 ## plot GO
 plot_go <- function(GO, label, prefix){
     pdf(paste0(prefix, label, '.pdf'), width = 10, height = 6.5)
-    g = enrichplot::dotplot(GO[['MF']], showCategory = 20, title = paste0(label, '_MF'))
-    print(g)
     g = enrichplot::dotplot(GO[['MF']], showCategory = 20, title = paste0(label, '_MF'))
     print(g)
     g = enrichplot::dotplot(GO[['BP']], showCategory = 20, title = paste0(label, '_BP'))
@@ -138,6 +141,40 @@ comparisons <- lapply(rownames(design), function(x){
 })
 names(comparisons) <- rownames(design)
 
+### do PCA and hclust
+print('++++ PCA and hcluster ++++')
+cmat.log = log10(cmat+1)
+var.3k = names(sort(apply(cmat.log, 1, var), decreasing = T)[1:3000])
+cmat.log = cmat.log[var.3k,]
+
+pc.cr=prcomp(t(cmat.log))
+imp = summary(pc.cr)$importance
+
+### plot pca
+plot_df = as.data.frame(pc.cr$x)
+plot_df$sname = rownames(plot_df)
+g = ggplot(data = plot_df, aes(x = PC1, y = PC2))+
+        geom_point()+theme_bw()+
+        theme(axis.text.x=element_text(size=10, colour = "black"),
+        axis.text.y=element_text(size=10, colour = "black"),
+        panel.border = element_blank(),axis.line = element_line(colour = "black"),
+        text=element_text(size=14, colour = "black"),
+        legend.text=element_text(size=10),
+        plot.title = element_text(hjust=0.5,vjust = 0.5,
+                                margin = margin(l=100,r=50,t=10,b=10),face = "bold", colour = "black"))+
+        geom_text_repel(aes(label = sname), colour = 'black')+
+        xlab(paste0('PC1 (', round(imp[3,'PC1']*100, 2), '%)'))+
+        ylab(paste0('PC2 (', round(imp[3,'PC2']*100, 2), '%)'))
+
+pdf(paste0(prefix, '.pca.pdf'), width = 4, height = 3.5)
+print(g)
+dev.off()
+
+## hclust
+pdf(paste0(prefix, '.hclust.pdf'), width = 4, height = 3.5)
+plot(hclust(dist(t(cmat.log))))
+dev.off()
+
 ### do each DESeq2
 diff_res = list(allgene=list(), protein_only=list())
 for (comp in names(comparisons)) {
@@ -153,6 +190,8 @@ for (comp in names(comparisons)) {
     dds <- DESeqDataSetFromMatrix(tmp_count,
                                 cond, ~ cond)
     dds <- DESeq(dds)
+    ## save DEseq obj
+    saveRDS(dds, file = paste0(prefix, '_', comp, '_deseq2_obj.rds'))
     diffexp_res <- as.data.frame(results(dds))
     ## plot
     vocano_plot(mat=diffexp_res, prefix = paste0(prefix, '_', comp, '_allgene'))
@@ -217,7 +256,7 @@ if (go == 'True'){
             write.csv(up, file = paste0(prefix, '_', comp, ".protein_gene.UP.csv"), quote = F)
             ### functional enrichment
             # ===== up ======
-            up_go_res = enrichment_analysis(geneset = rownames(up)[!grepl('^mt-|MT-', rownames(up))], background='all', species = 'mmu')
+            up_go_res = enrichment_analysis(geneset = rownames(up)[!grepl('^mt-|MT-', rownames(up))], background='all', species = species)
             ## plot
             saveRDS(up_go_res$go, file = paste0(prefix, '_', comp, ".GO_UP.rds"))
             plot_go(GO=up_go_res$go, label=paste0(comp, '_up_GO'), prefix = prefix)
@@ -244,7 +283,7 @@ if (go == 'True'){
             }
             write.csv(down, file = paste0(prefix, '_', comp, ".protein_gene.DOWN.csv"), quote = F)
 
-            down_go_res = enrichment_analysis(geneset = rownames(down)[!grepl('^mt-|MT-', rownames(down))], background='all', species = 'mmu')
+            down_go_res = enrichment_analysis(geneset = rownames(down)[!grepl('^mt-|MT-', rownames(down))], background='all', species = species)
             saveRDS(down_go_res$go, file = paste0(prefix, '_', comp, ".GO_DOWN.rds"))
             plot_go(GO=down_go_res$go, label=paste0(comp, '_down_GO'), prefix = prefix)
             ### write out

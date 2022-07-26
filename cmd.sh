@@ -12,7 +12,6 @@ docker run -it --name compass -p 8880:8880 -v /Users/rongbinzheng/Documents:/Use
 ## for vue
 docker run -it --name vue -p 8880:8880 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents  vue:latest
 
-
 jupyter notebook --allow-root --port=8080 --no-browser --ip=0.0.0.0 
 
 remotes::install_version(package = 'Seurat', version = package_version('2.0.1'))
@@ -20,13 +19,13 @@ remotes::install_version(package = 'Seurat', version = package_version('2.0.1'))
 ## E2
 jupyter notebook --no-browser --port 8900 --NotebookApp.iopub_data_rate_limit=10000000000 --ip=0.0.0.0 --NotebookApp.allow_origin=* --allow-root
 
-ssh -N -L 8900:compute-0-4.tch.harvard.edu:8900 -o ServerAliveInterval=30 ch228298@e2.tch.harvard.edu
+ssh -N -L 8900:compute-1-0.tch.harvard.edu:8900 -o ServerAliveInterval=30 ch228298@e2.tch.harvard.edu
 
 ## mghpcc
 ## in mghpcc run:
 jupyter notebook --no-browser --port 8900 --NotebookApp.iopub_data_rate_limit=10000000000 --ip=0.0.0.0 --NotebookApp.allow_origin=* --allow-root
 ## in e2 run:
-ssh -f -L 8900:compute-m7c1-0-4:8900 ch210487@bch-mghpcc.rc.fas.harvard.edu -N
+ssh -f -L 8900:compute-m7c1-1-6:8900 ch210487@bch-mghpcc.rc.fas.harvard.edu -N
 
 ##
 mkdir /lab-share/Cardio-Chen-e2/Public/rongbinzheng/google_drive
@@ -275,4 +274,69 @@ for line in open('mouse_KEGG_terms_symbol.txt', 'r'):
 
 
 ((adipose[Title/Abstract]) OR (adipocyte[Title/Abstract]) OR (adipocytes[Title/Abstract]) OR (BAT[Title/Abstract]) OR (WAT[Title/Abstract])) AND ((metabolite sensing[Title/Abstract]) OR (cross-talk[Title/Abstract]) OR (crosstalk[Title/Abstract]) OR (cell communication[Title/Abstract]) OR (cell-cell communication[Title/Abstract]) OR (cellular communication[Title/Abstract]) OR (metabolic communication[Title/Abstract]) OR (metabolite communication[Title/Abstract]) OR (paracrine[Title/Abstract]) OR (autocrine[Title/Abstract]) OR (angiocrine[Title/Abstract]))
+
+
+
+
+samples:
+  H2AZ_Ctrl:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/H2AZ_2022/00_fastq/1_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/H2AZ_2022/00_fastq/1_R2_001.fastq.gz
+  H2AZ_CL:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/H2AZ_2022/00_fastq/2_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/H2AZ_2022/00_fastq/2_R2_001.fastq.gz
+  H2AZac_Ctrl:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/H2AZ_2022/00_fastq/3_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/H2AZ_2022/00_fastq/3_R2_001.fastq.gz
+  H2AZac_CL:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/H2AZ_2022/00_fastq/4_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/H2AZ_2022/00_fastq/4_R2_001.fastq.gz
+  IgG_Ctrl:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/H2AZ_2022/00_fastq/5_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/H2AZ_2022/00_fastq/5_R2_001.fastq.gz
+  IgG_CL:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/H2AZ_2022/00_fastq/6_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/H2AZ_2022/00_fastq/6_R2_001.fastq.gz
+
+
+
+
+fastp 0.20.1
+SyntaxError:
+Not all output, log and benchmark files of rule peaks_getBroadStats contain the same wildcards. This is crucial though, in order to avoid that two or more jobs write to the same file.
+  File "/lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/H2AZ_2022_1st/CHIPS/chips.snakefile", line 258, in <module>
+  File "/lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/H2AZ_2022_1st/CHIPS/modules/peaks.snakefile", line 314, in <module>
+
+
+./1_R1_001.fastq.gz: OK
+md5sum: ./1_R2_001.fastq.gz: No such file or directory
+./1_R2_001.fastq.gz: FAILED open or read
+md5sum: WARNING: 1 listed file could not be read
+md5sum: ./2_R1_001.fastq.gz: No such file or directory
+./2_R1_001.fastq.gz: FAILED open or read
+md5sum: WARNING: 1 listed file could not be read
+md5sum: ./2_R2_001.fastq.gz: No such file or directory
+./2_R2_001.fastq.gz: FAILED open or read
+md5sum: WARNING: 1 listed file could not be read
+md5sum: ./3_R1_001.fastq.gz: No such file or directory
+./3_R1_001.fastq.gz: FAILED open or read
+md5sum: WARNING: 1 listed file could not be read
+
+
+
+
+
+rclone sync CommonData google-drive:laptop/CommonData
+
+
+
+
+
+d = read.table('H2AZ_CL_vs_IgG_pooled_H2AZ_CL.bgsub.Fnor-H2AZ_Ctrl_vs_IgG_pooled_H2AZ_Ctrl.bgsub.Fnor.regions.integrative.xls.heightFC_1.5_P0.05.bed', sep = '\t', header = F)
+up = subset(d, V5 > 0)
+down = subset(d, V5 < 0)
+
+write.table(up, file = 'H2AZ_CL_vs_Ctrl_IgGSub_dregion_up.bed', sep = '\t', row.names = F, col.names = F, quote = F)
+write.table(down, file = 'H2AZ_CL_vs_Ctrl_IgGSub_dregion_down.bed', sep = '\t', row.names = F, col.names = F, quote = F)
+
 

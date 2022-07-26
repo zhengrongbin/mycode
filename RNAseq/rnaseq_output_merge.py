@@ -8,6 +8,7 @@ from argparse import RawDescriptionHelpFormatter
 ## === gene annotation file
 global mm10_gene_ann_path; mm10_gene_ann_path = '/lab-share/Cardio-Chen-e2/Public/rongbinzheng/Genome/mm10/gencode.vM27.annotation.gene_annotation.csv'
 global hg38_gene_ann_path; hg38_gene_ann_path = '/lab-share/Cardio-Chen-e2/Public/rongbinzheng/Genome/hg38/gencode.v38.annotation.gene_annotation.csv'
+global fish_gene_ann_path; fish_gene_ann_path = '/lab-share/Cardio-Chen-e2/Public/rongbinzheng/Genome/hg38/fish.annotation.gene_annotation.csv'
 
 class FriendlyArgumentParser(argparse.ArgumentParser):
     """
@@ -44,7 +45,7 @@ def parse_args(args=None):
     parser_ann_gene.add_argument("-t", "--tpm", dest="tpm_file", required=False, type=str,
                              help="path of RSEM output gene rsem")
     parser_ann_gene.add_argument("-s", "--species", dest="species", required=True, type=str,
-                             help="should be one of [hg38, mm10]")
+                             help="should be one of [hg38, mm10, fish]")
     parser_ann_gene.add_argument("-d", "--dir", dest="dir_path", required=False, type=str,
                              help="new directory for saving the result, default back to the original path")
 
@@ -74,6 +75,8 @@ def _annotate_gene_name_(count_file, tpm_file, species, dir_path):
         gene_ann_path = hg38_gene_ann_path
     elif species == 'mm10':
         gene_ann_path = mm10_gene_ann_path
+    elif species == 'fish':
+        gene_ann_path = fish_gene_ann_path
     else:
         print('species problem')
         sys.exit(0)
