@@ -10,6 +10,7 @@ library('clusterProfiler')
 library("org.Mm.eg.db")
 library("org.Hs.eg.db")
 library('org.Dr.eg.db')
+library('ComplexHeatmap')
 
 option_list <- list(
     make_option(c("-c", "--count"), type = "character", default=TRUE,
@@ -25,7 +26,9 @@ option_list <- list(
     make_option(c("-p", "--prefix"), type = "character", default=FALSE,
               help="the prefix of output"),
     make_option(c("-o", "--protein_coding"), type = "character", default=FALSE,
-              help="only protein coding, the gene annotation file, gene_name as column to notify the gene name")
+              help="only protein coding, the gene annotation file, gene_name as column to notify the gene name"),
+    make_option(c("-k", "--kegg"), type = "character", default=FALSE,
+              help="the rds path for kegg gene list for fgsea enrichment")
 )
 
 opt_parser <- OptionParser(option_list=option_list)
@@ -38,6 +41,7 @@ prefix <- opt$prefix
 species <- opt$species
 go <- opt$gene_ont
 gsea <- opt$gsea
+kegg_path = opt$kegg
 
 if (species == 'hsa'){
     db = org.Hs.eg.db
@@ -163,8 +167,8 @@ g = ggplot(data = plot_df, aes(x = PC1, y = PC2))+
         plot.title = element_text(hjust=0.5,vjust = 0.5,
                                 margin = margin(l=100,r=50,t=10,b=10),face = "bold", colour = "black"))+
         geom_text_repel(aes(label = sname), colour = 'black')+
-        xlab(paste0('PC1 (', round(imp[3,'PC1']*100, 2), '%)'))+
-        ylab(paste0('PC2 (', round(imp[3,'PC2']*100, 2), '%)'))
+        xlab(paste0('PC1 (', round(imp[2,'PC1']*100, 2), '%)'))+
+        ylab(paste0('PC2 (', round(imp[2,'PC2']*100, 2), '%)'))
 
 pdf(paste0(prefix, '.pca.pdf'), width = 4, height = 3.5)
 print(g)
@@ -173,6 +177,11 @@ dev.off()
 ## hclust
 pdf(paste0(prefix, '.hclust.pdf'), width = 4, height = 3.5)
 plot(hclust(dist(t(cmat.log))))
+dev.off()
+## top variable gene heatmap
+cmat.log.scale = t(scale(t(cmat.log)))
+pdf(paste0(prefix, '.heatmap.pdf'), width = 4, height = 3.5)
+Heatmap(cmat.log.scale, show_row_names = F, name='Scaled Exp', show_row_dend = F)
 dev.off()
 
 ### do each DESeq2
@@ -302,6 +311,43 @@ if (go == 'True'){
     }
 }
 
+fgsea_fuc <- function(rank_genes, kegg_gmt_list, prefix){
+    set.seed(1234)
+    fgseaRes <- fgsea(kegg_gmt_list, rank_genes[!is.na(rank_genes)],
+                         minSize  = 15,
+                         maxSize  = 500)
+
+    fgseaRes$pathway = gsub('KEGG_', '', fgseaRes$pathway)
+    fgseaRes = fgseaRes[order(-fgseaRes$NES),]
+    plot_df = subset(fgseaRes, padj <= 0.1)
+    g = ggplot(plot_df, aes(x = NES, y = reorder(pathway, NES), colour=padj, size = size))+
+        geom_count()+
+        geom_point(shape = 1, color = 'black')+
+        xlab('Normalized Enrichment Score')+ylab('')+labs(title = 'Gene Set Enrichment Analysis')+
+        theme_bw()+theme(axis.text.x=element_text(size=10, face = 'bold', colour = "black",
+                                                angle = 45, hjust = 1, vjust = 1),
+                       axis.text.y=element_text(size=8, colour = "black"),
+                       panel.border = element_blank(),axis.line = element_line(colour = "black"),
+                       text=element_text(size=10, colour = "black"),
+                       legend.text=element_text(size=10),
+                       plot.title = element_text(hjust=0.5,vjust = 0.5,
+                                                 margin = margin(l=100,r=50,t=10,b=10),face = "bold", colour = "black"))+
+        scale_colour_gradient2(high = 'grey', low = 'red', limits = c(NA, 0.2), midpoint = 0.1)+
+        geom_vline(xintercept = 0, color = 'grey')
+    # save out gsea dot plot
+    msg('draw GSEA plot')
+    pdf(paste0(prefix, '_fgsea.pdf'), width = 10, height = 4 + (nrow(plot_df) * 0.1))
+    print(g)
+    dev.off()
+    ## write out gsea result table
+    res = as.matrix(fgseaRes)
+    res[,'leadingEdge'] = gsub(',', ';', as.vector(res[,'leadingEdge']))
+    msg('save GSEA result')
+    write.table(res, file = paste0(prefix, '_fgseaRes.tsv'), quote = F, row.names = F, sep = '\t')   
+    saveRDS(fgseaRes, file = paste0(prefix, '_fgseaRes.rds'))
+    return(plot_df)
+}
+
 ### GSEA
 if (gsea == "True"){
     print('+++++ GSEA')
@@ -346,6 +392,25 @@ if (gsea == "True"){
         gsea_data = gsea_data[order(-abs(gsea_data$NES)),]
         gsea_data[,2] = gsub(",", "", as.matrix(gsea_data[,2]))
         write.csv(gsea_data, file = paste0(prefix, '_', comp, '.gseaKEGG.csv'))
+    }
+    ## fgsea
+    if (kegg_path != FALSE){
+        kegg_gmt_list = readRDS(kegg_path) # GSEA reference
+
+        for (comp in names(diff_res$protein_only)){
+            print(comp)
+            diffexp <- diff_res$protein_only[[comp]]
+            diffexp <- subset(diffexp, !is.na(log2FoldChange) & !is.na(padj))
+
+            ### using log2FoldChange
+            gageinput <- as.vector(diffexp$log2FoldChange)
+            names(gageinput) <- as.vector(rownames(diffexp))
+            gageinput <- gageinput[!grepl('^mt-|MT-', names(gageinput))]
+
+            fgsea_res = fgsea_fuc(rank_genes=gageinput, 
+                            kegg_gmt_list=kegg_gmt_list, 
+                            prefix=paste0(prefix, '_', comp))
+        }
     }
 }
 

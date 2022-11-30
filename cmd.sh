@@ -1,5 +1,10 @@
 docker pull ubuntu:latest   
 
+curl -H "Accept: application/vnd.github+json" \
+ -H "Authorization: zhengrongbin <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>" \
+ https://api.github.com/repos/zhengrongbin/MEBOCOST/traffic/clones
+
+
 ## load whole document
 docker run -it --name routine -p 8080:8080 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents routine:latest
 
@@ -324,12 +329,7 @@ md5sum: WARNING: 1 listed file could not be read
 
 
 
-
-
 rclone sync CommonData google-drive:laptop/CommonData
-
-
-
 
 
 d = read.table('H2AZ_CL_vs_IgG_pooled_H2AZ_CL.bgsub.Fnor-H2AZ_Ctrl_vs_IgG_pooled_H2AZ_Ctrl.bgsub.Fnor.regions.integrative.xls.heightFC_1.5_P0.05.bed', sep = '\t', header = F)
@@ -338,5 +338,56 @@ down = subset(d, V5 < 0)
 
 write.table(up, file = 'H2AZ_CL_vs_Ctrl_IgGSub_dregion_up.bed', sep = '\t', row.names = F, col.names = F, quote = F)
 write.table(down, file = 'H2AZ_CL_vs_Ctrl_IgGSub_dregion_down.bed', sep = '\t', row.names = F, col.names = F, quote = F)
+
+
+
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dpeak T_H:C_H -b T_H:T_IgG,C_H:C_IgG -c T_H:7009569,T_IgG:19124209,C_H:2560138,C_IgG:13591195 --frsz 200 --extend 200 -o TH_vs_CH_dpeak
+
+
+
+
+for i in shcon-BRD4-1.FCHL5FKBBXY_L2_ITTACCGAC-CGAATACG shRB-BRD4-1.FCHL5FKBBXY_L2_ITTCCAGGT-CAGTGCTT shcon-BRD4-2.FCHL5FKBBXY_L2_ITCGTCTGA-GTCCTTGA shRB-BRD4-2.FCHL5FKBBXY_L2_ITACGGTCT-TCCATTGC
+do
+    bam=${i}.bam
+    # mkdir ${i}
+    # cd ${i}
+    # ln -s /lab-share/Cardio-Chen-e2/Public/rongbinzheng/software/CHIPS .
+    cp small.sbatch ${i}.sbatch
+    echo "samtools fastq -1 ${i}.r1.fq -2 ${i}.r2.fq -0 null -s null -n ../${bam}" >> ${i}.sbatch
+
+done
+
+
+samples:
+   shcon_BRD4_1:
+   - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/HaojieHuang/shcon-BRD4-1.FCHL5FKBBXY_L2_ITTACCGAC-CGAATACG.r1.fq
+   - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/HaojieHuang/shcon-BRD4-1.FCHL5FKBBXY_L2_ITTACCGAC-CGAATACG.r2.fq
+  shcon_BRD4_2:
+   - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/HaojieHuang/shcon-BRD4-2.FCHL5FKBBXY_L2_ITCGTCTGA-GTCCTTGA.r1.fq
+   - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/HaojieHuang/shcon-BRD4-2.FCHL5FKBBXY_L2_ITCGTCTGA-GTCCTTGA.r2.fq
+  shRB_BRD4_1:
+   - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/HaojieHuang/shRB-BRD4-1.FCHL5FKBBXY_L2_ITTCCAGGT-CAGTGCTT.r1.fq
+   - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/HaojieHuang/shRB-BRD4-1.FCHL5FKBBXY_L2_ITTCCAGGT-CAGTGCTT.r2.fq
+  shRB_BRD4_2:
+   - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/HaojieHuang/shRB-BRD4-2.FCHL5FKBBXY_L2_ITACGGTCT-TCCATTGC.r1.fq
+   - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/HaojieHuang/shRB-BRD4-2.FCHL5FKBBXY_L2_ITACGGTCT-TCCATTGC.r2.fq
+
+
+for i in 0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5 6.0 6.5 7.0 7.5 8.0 8.5 9.0 9.5 10.0
+do
+    cp noise_small.sbatch noise_${i}.sbatch
+    echo "python mebo_cold2_test_noise_replaceTrue.py ${i}" >> noise_${i}.sbatch
+    echo "echo 'Finish'" >> noise_${i}.sbatch
+done
+
+
+for i in 0.5 1.5 2 2.5 3
+do
+    cp stability_small.sbatch stability_${i}.sbatch
+    ec=`expr $i*0.866 | bc`
+    mc=`expr $i*0.141 | bc`
+    echo "python stability_noise_cutoff.py ${ec} ${mc}" >> stability_${i}.sbatch
+    echo "echo 'Finish'" >> stability_${i}.sbatch
+done
 
 
