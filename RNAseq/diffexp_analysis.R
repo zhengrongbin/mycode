@@ -127,6 +127,8 @@ vocano_plot <- function(mat, prefix){
             plot.title = element_text(hjust=0.5,vjust = 0.5,
                                     margin = margin(l=100,r=50,t=10,b=10),face = "bold", colour = "black"))+
             scale_colour_manual(values=c('Up'='red', 'Stable'='grey', 'Down'='#1E90FF'))+
+            labs(title=paste0('Up=', nrow(plot_df[plot_df[,'diff'] == 'Up',]), '\nDown=',
+                             nrow(plot_df[plot_df[,'diff'] == 'Down',])))+
             geom_text_repel(data = labels, aes(x = log2FoldChange, y = -log10(padj), label = gene), colour = 'black')
     pdf(paste0(prefix, '_volcano.pdf'), width = 8)
     print(g)
@@ -180,7 +182,7 @@ plot(hclust(dist(t(cmat.log))))
 dev.off()
 ## top variable gene heatmap
 cmat.log.scale = t(scale(t(cmat.log)))
-pdf(paste0(prefix, '.heatmap.pdf'), width = 4, height = 3.5)
+pdf(paste0(prefix, '.heatmap.pdf'), width = 5, height = 4.5)
 Heatmap(cmat.log.scale, show_row_names = F, name='Scaled Exp', show_row_dend = F)
 dev.off()
 
@@ -335,14 +337,12 @@ fgsea_fuc <- function(rank_genes, kegg_gmt_list, prefix){
         scale_colour_gradient2(high = 'grey', low = 'red', limits = c(NA, 0.2), midpoint = 0.1)+
         geom_vline(xintercept = 0, color = 'grey')
     # save out gsea dot plot
-    msg('draw GSEA plot')
     pdf(paste0(prefix, '_fgsea.pdf'), width = 10, height = 4 + (nrow(plot_df) * 0.1))
     print(g)
     dev.off()
     ## write out gsea result table
     res = as.matrix(fgseaRes)
     res[,'leadingEdge'] = gsub(',', ';', as.vector(res[,'leadingEdge']))
-    msg('save GSEA result')
     write.table(res, file = paste0(prefix, '_fgseaRes.tsv'), quote = F, row.names = F, sep = '\t')   
     saveRDS(fgseaRes, file = paste0(prefix, '_fgseaRes.rds'))
     return(plot_df)
