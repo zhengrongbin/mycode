@@ -28,7 +28,9 @@ option_list <- list(
     make_option(c("-o", "--protein_coding"), type = "character", default=FALSE,
               help="only protein coding, the gene annotation file, gene_name as column to notify the gene name"),
     make_option(c("-k", "--kegg"), type = "character", default=FALSE,
-              help="the rds path for kegg gene list for fgsea enrichment")
+              help="the rds path for kegg gene list for fgsea enrichment"),
+    make_option(c("-r", "--Replicate"), type = "character", default=FALSE,
+              help="True or False, True for correcting replicates in DESeq2, make sure sample name ends with _rep1, _rep2, .etc")
 )
 
 opt_parser <- OptionParser(option_list=option_list)
@@ -42,6 +44,7 @@ species <- opt$species
 go <- opt$gene_ont
 gsea <- opt$gsea
 kegg_path = opt$kegg
+Replicate = opt$Replicate
 
 if (species == 'hsa'){
     db = org.Hs.eg.db
@@ -195,15 +198,23 @@ for (comp in names(comparisons)) {
         vocano_plot(mat=diffexp_res, prefix = paste0(prefix, '_', comp, '_allgene'))
         next
     }
-    cond = DataFrame('cond'=comparisons[[comp]])
-    samples <- names(comparisons[[comp]])
-    tmp_count <- cmat[,samples]
-    dds <- DESeqDataSetFromMatrix(tmp_count,
-                                cond, ~ cond)
+    if (Replicate == 'True'){
+        samples <- names(comparisons[[comp]])
+        cond = DataFrame('cond'=comparisons[[comp]], 'Replicate'=sapply(samples, function(x) tail(strsplit(x, '\\_')[[1]], 1)))
+        tmp_count <- cmat[,samples]
+        dds <- DESeqDataSetFromMatrix(tmp_count,
+                                    cond, ~ Replicate+cond)
+    }else{
+        cond = DataFrame('cond'=comparisons[[comp]])
+        samples <- names(comparisons[[comp]])
+        tmp_count <- cmat[,samples]
+        dds <- DESeqDataSetFromMatrix(tmp_count,
+                                    cond, ~ cond)
+    }
     dds <- DESeq(dds)
     ## save DEseq obj
     saveRDS(dds, file = paste0(prefix, '_', comp, '_deseq2_obj.rds'))
-    diffexp_res <- as.data.frame(results(dds))
+    diffexp_res <- as.data.frame(results(dds, contrast=list('cond')))
     ## plot
     vocano_plot(mat=diffexp_res, prefix = paste0(prefix, '_', comp, '_allgene'))
     ## write out
@@ -227,14 +238,16 @@ if (file.exists(protein_coding_path) == TRUE){
             vocano_plot(mat=pdiffexp_res, prefix = paste0(prefix, '_', comp, '_protein_coding'))
             next
         }
-        cond = DataFrame('cond'=comparisons[[comp]])
-        samples <- names(comparisons[[comp]])
-        tmp_count <- cmat[shared_protein_genes,samples] ## only protein coding genes
-        dds <- DESeqDataSetFromMatrix(tmp_count,
-                                    cond, ~ cond)
-        dds <- DESeq(dds)
-        ## write out
-        pdiffexp_res = as.data.frame(results(dds))
+        # cond = DataFrame('cond'=comparisons[[comp]])
+        # samples <- names(comparisons[[comp]])
+        # tmp_count <- cmat[shared_protein_genes,samples] ## only protein coding genes
+        # dds <- DESeqDataSetFromMatrix(tmp_count,
+        #                             cond, ~ cond)
+        # dds <- DESeq(dds)
+        # ## write out
+        # pdiffexp_res = as.data.frame(results(dds))
+        ddf = diff_res[['allgene']][[comp]]
+        pdiffexp_res = subset(ddf, rownames(ddf) %in% shared_protein_genes)
         ## 
         vocano_plot(mat=pdiffexp_res, prefix = paste0(prefix, '_', comp, '_protein_coding'))
 

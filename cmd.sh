@@ -24,7 +24,7 @@ remotes::install_version(package = 'Seurat', version = package_version('2.0.1'))
 ## E2
 jupyter notebook --no-browser --port 8900 --NotebookApp.iopub_data_rate_limit=10000000000 --ip=0.0.0.0 --NotebookApp.allow_origin=* --allow-root
 
-ssh -N -L 8900:compute-1-0.tch.harvard.edu:8900 -o ServerAliveInterval=30 ch228298@e2.tch.harvard.edu
+ssh -N -L 8900:compute-1-6.tch.harvard.edu:8900 -o ServerAliveInterval=30 ch228298@e2.tch.harvard.edu
 
 ## mghpcc
 ## in mghpcc run:
@@ -389,5 +389,205 @@ do
     echo "python stability_noise_cutoff.py ${ec} ${mc}" >> stability_${i}.sbatch
     echo "echo 'Finish'" >> stability_${i}.sbatch
 done
+
+
+for x in `ls ./|grep -v shELF3|grep T47D`
+do
+    cat ${x}/sh.sh | sed 's/downgenes/upgenes/g' > ${x}/sh.sh
+done
+
+cat KD-minusCL-ATAC_S3_L001_R1_001.fastq.gz KD-minusCL-ATAC_S3_L002_R1_001.fastq.gz \
+ KD-minusCL-ATAC_S3_L003_R1_001.fastq.gz KD-minusCL-ATAC_S3_L004_R1_001.fastq.gz > KD_minusCL_ATAC.R1.fq.gz
+cat KD-minusCL-ATAC_S3_L001_R2_001.fastq.gz KD-minusCL-ATAC_S3_L002_R2_001.fastq.gz \
+ KD-minusCL-ATAC_S3_L003_R2_001.fastq.gz KD-minusCL-ATAC_S3_L004_R2_001.fastq.gz > KD_minusCL_ATAC.R2.fq.gz
+
+cat KD-plusCL-ATAC_S4_L001_R1_001.fastq.gz KD-plusCL-ATAC_S4_L002_R1_001.fastq.gz \
+ KD-plusCL-ATAC_S4_L003_R1_001.fastq.gz KD-plusCL-ATAC_S4_L004_R1_001.fastq.gz > KD_plusCL_ATAC.R1.fq.gz
+cat KD-plusCL-ATAC_S4_L001_R2_001.fastq.gz KD-plusCL-ATAC_S4_L002_R2_001.fastq.gz \
+ KD-plusCL-ATAC_S4_L003_R2_001.fastq.gz KD-plusCL-ATAC_S4_L004_R2_001.fastq.gz > KD_plusCL_ATAC.R2.fq.gz
+
+cat shNT-minusCL-ATAC_S1_L001_R1_001.fastq.gz shNT-minusCL-ATAC_S1_L002_R1_001.fastq.gz \
+ shNT-minusCL-ATAC_S1_L003_R1_001.fastq.gz shNT-minusCL-ATAC_S1_L004_R1_001.fastq.gz > shNT_minusCL_ATAC.R1.fq.gz
+cat shNT-minusCL-ATAC_S1_L001_R2_001.fastq.gz shNT-minusCL-ATAC_S1_L002_R2_001.fastq.gz \
+ shNT-minusCL-ATAC_S1_L003_R2_001.fastq.gz shNT-minusCL-ATAC_S1_L004_R2_001.fastq.gz > shNT_minusCL_ATAC.R2.fq.gz
+
+cat shNT-plusCL-ATAC_S2_L001_R1_001.fastq.gz shNT-plusCL-ATAC_S2_L002_R1_001.fastq.gz \
+ shNT-plusCL-ATAC_S2_L003_R1_001.fastq.gz shNT-plusCL-ATAC_S2_L004_R1_001.fastq.gz > shNT_plusCL_ATAC.R1.fq.gz
+cat shNT-plusCL-ATAC_S2_L001_R2_001.fastq.gz shNT-plusCL-ATAC_S2_L002_R2_001.fastq.gz \
+ shNT-plusCL-ATAC_S2_L003_R2_001.fastq.gz shNT-plusCL-ATAC_S2_L004_R2_001.fastq.gz > shNT_plusCL_ATAC.R2.fq.gz
+
+samples:
+  KD_minusCL_ATAC
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/ATAC/KD_minusCL_ATAC.R1.fq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/ATAC/KD_minusCL_ATAC.R2.fq.gz
+  KD_plusCL_ATAC
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/ATAC/KD_plusCL_ATAC.R1.fq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/ATAC/KD_plusCL_ATAC.R2.fq.gz
+  shNT_minusCL_ATAC
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/ATAC/shNT_minusCL_ATAC.R1.fq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/ATAC/shNT_minusCL_ATAC.R2.fq.gz
+  shNT_plusCL_ATAC
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/ATAC/shNT_plusCL_ATAC.R1.fq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/ATAC/shNT_plusCL_ATAC.R2.fq.gz 
+
+
+res = li.mt.liana_pipe(adata=adata, groupby = 'bulk_labels',
+    resource_name = )
+
+from liana.mt import singlecellsignalr, connectome, cellphonedb, natmi, logfc, cellchat, geometric_mean
+
+cellchat(adata=adata, groupby = 'bulk_labels')
+cellphonedb(adata=adata, groupby = 'bulk_labels')
+
+from liana.mt import rank_aggregate
+
+rank_aggregate(adata = adata, groupby = 'bulk_labels')
+
+
+
+
+h5ad_file = sys.argv[1] ## the path of h5ad file
+feature_col = sys.argv[2] ## columns for grouping cell types in adata.obs
+
+
+adata = sc.read_h5ad(h5ad_file)
+
+if 'process_status' in adata.obs.columns.tolist():
+    adata = adata[adata.obs['process_status'] == 'QC pass']
+
+adata.obs['disease'] = ['Normal' if x == 'NA' else x for x in adata.obs['disease'].tolist()]
+
+diseases = adata.obs['disease'].unique().tolist()
+for d in diseases:
+    file = 'liana_result/%s.%s.liana.csv'%(os.path.basename(h5ad_file), d.replace('_', '').replace(' ', '_').replace(',', '').replace("'", '').replace("’", '').replace('/', '_or_'))
+    if os.path.exists(file):
+        continue
+    ### 1. pass expression data by scanpy adata object
+    adata_new = adata[adata.obs['disease'] == d]
+    ct_count = adata_new.obs.groupby(['disease', 'ct'])['orig.ident'].count()
+    if ct_count[ct_count>5].shape[0] == 1:
+        continue
+    adata_new.obs = adata_new.obs[[feature_col]]
+    adata_new.obs[feature_col] = pd.Categorical(adata_new.obs['ct'])
+    res = rank_aggregate(adata = adata_new, groupby = feature_col,
+                         use_raw = False, inplace = False)
+    res.to_csv(file)
+
+
+for i in adrenal_gland bone_marrow brain breast breast_milk eye gut heart kidney liver lung pancreas skin thymus
+do
+    cp simple.sbatch ${i}_liana.sbatch
+    echo 'python liana_run.py data/'${i}'.h5ad ct' >> ${i}_liana.sbatch
+    echo "echo Finished" >> ${i}_liana.sbatch
+done
+
+
+
+
+d = sc.read_h5ad('data/adipose.h5ad')
+d1 = d.obs[d.obs['project_id'] == 'GSE129363'][['sample', 'sample_type', 'tissue', 'disease', 'anatomical_site', 'bmi', 'ct']]
+d1[~d1['sample'].duplicated()]
+d1[(d1['anatomical_site'] == 'visceral adipose tissue') & (d1['sample_type'] == 'normal')]
+
+d2 = d.obs[d.obs['project_id'] == 'GSE136229'][['sample', 'sample_type', 'tissue', 'disease', 'anatomical_site', 'bmi', 'ct']]
+d2[~d2['sample'].duplicated()]
+
+dd = d.obs[~d.obs['sample'].duplicated()][['sample', 'project_id', 'sample_type', 'tissue', 'disease', 'anatomical_site', 'bmi', 'ct', 'cell_sorting']].sort_values('sample')
+
+                                    sample project_id               sample_type   tissue   disease              anatomical_site    bmi                        ct          cell_sorting
+AAACCTGAGCCATCGC-1--GSM3711757  GSM3711757  GSE129363  non-tumor disease tissue  adipose  diabetes  subcutaneous adipose tissue  obese                  pericyte                    NA
+AAACCTGAGATGCCAG-1--GSM3711758  GSM3711758  GSE129363  non-tumor disease tissue  adipose  diabetes      visceral adipose tissue  obese             CD14 monocyte                    NA
+AAACCTGAGCCACTAT-1--GSM3711759  GSM3711759  GSE129363  non-tumor disease tissue  adipose  diabetes  subcutaneous adipose tissue  obese                macrophage                    NA
+AAACCTGAGAAAGTGG-1--GSM3711760  GSM3711760  GSE129363  non-tumor disease tissue  adipose  diabetes      visceral adipose tissue  obese  adipose ITLN1 fibroblast                    NA
+AAACCTGCACCGCTAG-1--GSM3711771  GSM3711771  GSE129363  non-tumor disease tissue  adipose  diabetes      visceral adipose tissue  obese  adipose ITLN1 fibroblast                    NA
+AAACCTGCAATCAGAA-1--GSM3711773  GSM3711773  GSE129363                    normal  adipose        NA      visceral adipose tissue  obese  adipose ITLN1 fibroblast                    NA
+AAACCTGTCTGTCCGT-1--GSM3711774  GSM3711774  GSE129363                    normal  adipose        NA  subcutaneous adipose tissue  obese                   CD16 NK                    NA
+AAACCTGCACCTCGTT-1--GSM3711775  GSM3711775  GSE129363                    normal  adipose        NA      visceral adipose tissue  obese                   CD16 NK                    NA
+AAACGGGAGTGTTAGA-1--GSM3711776  GSM3711776  GSE129363  non-tumor disease tissue  adipose  diabetes      visceral adipose tissue  obese                GZMK CD8 T                    NA
+AAACCTGGTAAACCTC-1--GSM3711777  GSM3711777  GSE129363  non-tumor disease tissue  adipose  diabetes  subcutaneous adipose tissue  obese                 adipocyte                    NA
+AAACGGGAGCTGTCTA-1--GSM3711779  GSM3711779  GSE129363                    normal  adipose        NA      visceral adipose tissue  obese  adipose ITLN1 fibroblast                    NA
+AAACCTGCACAGACTT-1--GSM3711780  GSM3711780  GSE129363                    normal  adipose        NA      visceral adipose tissue  obese  adipose ITLN1 fibroblast                    NA
+AAACCTGCAGTCTTCC-1--GSM3711781  GSM3711781  GSE129363                    normal  adipose        NA  subcutaneous adipose tissue  obese                    mregDC                    NA
+AAACCTGCATAACCTG-1--GSM3711782  GSM3711782  GSE129363                    normal  adipose        NA      visceral adipose tissue  obese                GZMK CD8 T                 CD34-
+AAACCTGAGATGTGTA-1--GSM3711783  GSM3711783  GSE129363                    normal  adipose        NA      visceral adipose tissue  obese            CFD fibroblast                 CD34+
+AAACCTGAGCACACAG-1--GSM3711784  GSM3711784  GSE129363                    normal  adipose        NA  subcutaneous adipose tissue  obese            CFD fibroblast                 CD34-
+AAACCTGAGCTCAACT-1--GSM3711786  GSM3711786  GSE129363  non-tumor disease tissue  adipose  diabetes      visceral adipose tissue  obese               naive CD4 T                 CD34-
+AAACCTGAGAGTACCG-1--GSM3711787  GSM3711787  GSE129363  non-tumor disease tissue  adipose  diabetes      visceral adipose tissue  obese            CFD fibroblast                 CD34+
+AAACCTGAGACACGAC-1--GSM3711788  GSM3711788  GSE129363  non-tumor disease tissue  adipose  diabetes  subcutaneous adipose tissue  obese            CFD fibroblast                 CD34+
+AAACCTGAGTTGTAGA-1--GSM4042945  GSM4042945  GSE136229                    normal  adipose        NA      visceral adipose tissue     NA  adipose ITLN1 fibroblast                    NA
+AAACGGGAGCAGCGTA-1--GSM4042946  GSM4042946  GSE136229                    normal  adipose        NA      visceral adipose tissue     NA  adipose ITLN1 fibroblast                    NA
+AAACCCAAGCGAAACC-1--GSM4717158  GSM4717158  GSE155960                    normal  adipose        NA                           NA     NA     KLRB1 cytotoxic CD4 T                 CD45+
+AAACCCAAGGTTTACC-1--GSM4717159  GSM4717159  GSE155960                    normal  adipose        NA                           NA     NA                GZMK CD8 T                 CD45+
+AAACCCATCAAGTTGC-1--GSM4717160  GSM4717160  GSE155960                    normal  adipose        NA                           NA     NA              memory CD4 T                 CD45+
+AAACCCAAGCATTGTC-1--GSM4717161  GSM4717161  GSE155960                    normal  adipose        NA                           NA     NA              memory CD4 T                 CD45+
+AAACCCAGTGTTTACG-1--GSM4717162  GSM4717162  GSE155960                    normal  adipose        NA                           NA     NA              memory CD4 T                 CD45+
+AAACCCAAGACAGCGT-1--GSM4717163  GSM4717163  GSE155960                    normal  adipose        NA                           NA     NA              memory CD4 T                 CD45+
+AAACCCAAGTTACGAA-1--GSM4724861  GSM4724861  GSE156110                    normal  adipose        NA                           NA     NA                   CD16 NK   Natural killer cell
+AAACCCACAGAGGAAA-1--GSM4724862  GSM4724862  GSE156110                    normal  adipose        NA                           NA     NA                   CD16 NK   Natural killer cell
+AAACCCAAGCACTTTG-1--GSM4724863  GSM4724863  GSE156110                    normal  adipose        NA                           NA     NA                   CD16 NK  Innate lymphoid cell
+AAACCCACAATCGAAA-1--GSM4724864  GSM4724864  GSE156110                    normal  adipose        NA                           NA     NA           SLAMF1-XCL+ ILC  Innate lymphoid cell
+AAACCCAAGAGCAAGA-1--GSM4724865  GSM4724865  GSE156110                    normal  adipose        NA                           NA     NA                      cDC2        Dendritic cell
+AAACCCACACCCAAGC-1--GSM4724866  GSM4724866  GSE156110                    normal  adipose        NA                           NA     NA                      cDC2        Dendritic cell
+AAACGAATCTGTCCGT-1--GSM4724867  GSM4724867  GSE156110                    normal  adipose        NA                           NA     NA             CD16 monocyte            Macrophage
+AAACCCATCTAGGCCG-1--GSM4724868  GSM4724868  GSE156110                    normal  adipose        NA                           NA     NA             CD14 monocyte            Macrophage
+AAACCCATCAAGTCGT-1--GSM5436518  GSM5436518  GSE179887               solid tumor  adipose    lipoma    stromal vascular fraction     NA             CD14 monocyte                    NA
+AAACCCAAGAAATTGC-1--GSM5436519  GSM5436519  GSE179887               solid tumor  adipose    lipoma    stromal vascular fraction     NA                GZMB CD8 T                    NA
+>>> 
+
+
+
+/lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/MicroC/20221226_MicroC_Yang/raw_data/12.17.22.MicroC/shNT-minusCL-rep1_S1_mapped.PT.bam
+/lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/MicroC/20221226_MicroC_Yang/raw_data/12.17.22.MicroC/shNT-minusCL-rep2_S2_mapped.PT.bam
+/lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/MicroC/20230106_MicroC_Yang/MicroC-9_S1_mapped.PT.bam
+/lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/MicroC/20230113_MicroC_Yang/MicroC-13_S1_mapped.PT.bam
+
+
+/lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/MicroC/20221226_MicroC_Yang/raw_data/12.26.22.MicroC/MicroC-2_S1_mapped.PT.bam
+/lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/MicroC/20221226_MicroC_Yang/raw_data/12.26.22.MicroC/MicroC-6_S2_mapped.PT.bam
+/lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/MicroC/20230107_MicroC_Yang/MicroC-10_S3_mapped.PT.bam
+/lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/MicroC/20230113_MicroC_Yang/MicroC-14_S2_mapped.PT.bam
+
+
+
+run-merge-pairs.sh shNT_minusCL_merge_mapq40_pairs ./pairs/mapped_shNT-minusCL-rep1_S1.pairs.gz ./pairs/mapped_shNT-minusCL-rep2_S2.pairs.gz ./pairs/mapped_MicroC-9_S1.pairs.gz ./pairs/mapped_MicroC-13_S1.pairs.gz 
+
+run-merge-pairs.sh shNT_plusCL_merge_mapq40_pairs ./pairs/mapped_MicroC-2_S1.pairs.gz ./pairs/mapped_MicroC-6_S2.pairs.gz ./pairs/mapped_MicroC-10_S3.pairs.gz ./pairs/mapped_MicroC-14_S2.pairs.gz
+
+
+STRIDE deconvolve --sc-count ../sc_counts.tsv --sc-celltype ../sc_meta.tsv --st-count ../st_counts.tsv --normalize
+
+STRIDE deconvolve --sc-count ../sc_count.tsv --sc-celltype ../sc_meta.tsv --st-count ../st_count.tsv --normalize
+
+STRIDE deconvolve --sc-count ../sc_count_hum.tsv --sc-celltype ../sc_meta.tsv --st-count ../st_count_hum.tsv --normalize
+
+cat Fastq/RNA${i}_S${i}_L001_R1_001.fastq.gz Fastq/RNA${i}_S${i}_L002_R1_001.fastq.gz Fastq/RNA${i}_S${i}_L003_R1_001.fastq.gz Fastq/RNA${i}_S${i}_L004_R1_001.fastq.gz > RNA${i}_R1.fq.gz
+cat Fastq/RNA${i}_S${i}_L001_R2_001.fastq.gz Fastq/RNA${i}_S${i}_L002_R2_001.fastq.gz Fastq/RNA${i}_S${i}_L003_R2_001.fastq.gz Fastq/RNA${i}_S${i}_L004_R2_001.fastq.gz > RNA${i}_R2.fq.gz
+
+
+samples:
+  H2AZ_minusCL_rep1:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-1_R1.fq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-1_R2.fq.gz
+  IgG_minusCL_rep1:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-2_R1.fq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-2_R2.fq.gz
+  H2AZ_plusCL_rep1:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-3_R1.fq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-3_R2.fq.gz
+  IgG_plusCL_rep1:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-4_R1.fq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-4_R2.fq.gz
+  H2AZ_minusCL_rep2:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-5_R1.fq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-5_R2.fq.gz
+  IgG_minusCL_rep2:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-6_R1.fq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-6_R2.fq.gz
+  H2AZ_plusCL_rep2:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-7_R1.fq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-7_R2.fq.gz
+  IgG_plusCL_rep2:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-8_R1.fq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/H2AZ_MNase/DataProcess/CUTRUN/Fastq/CUTandRUN-8_R2.fq.gz
 
 

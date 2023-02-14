@@ -18,15 +18,14 @@ gseaScores = function (geneList, geneSet, exponent = 1, fortify = FALSE)
     max.ES <- max(runningES)
     min.ES <- min(runningES)
     if (abs(max.ES) > abs(min.ES)) {
-    ES <- max.ES
-    }
-    else {
-    ES <- min.ES
+        ES <- max.ES
+    }else{
+        ES <- min.ES
     }
     df <- data.frame(x = seq_along(runningES), runningScore = runningES, 
-    position = as.integer(hits))
+        position = as.integer(hits))
     if (fortify == TRUE) {
-    return(df)
+        return(df)
     }
     df$gene = names(geneList)
     res <- list(ES = ES, runningES = df)
@@ -37,17 +36,17 @@ gseaScores = function (geneList, geneSet, exponent = 1, fortify = FALSE)
 gsInfo.new = function(geneList, geneSet, geneSetID, exponent=1){
     df.c = NULL
     for (geneSetId in geneSetID){
-    df <- gseaScores(geneList, geneSet[[geneSetId]], exponent, fortify=TRUE)
-    df$ymin <- 0
-    df$ymax <- 0
-    pos <- df$position == 1
-    h <- diff(range(df$runningScore))/20
-    df$ymin[pos] <- -h
-    df$ymax[pos] <- h
-    df$geneList <- geneList
+        df <- gseaScores(geneList, geneSet[[geneSetId]], exponent, fortify=TRUE)
+        df$ymin <- 0
+        df$ymax <- 0
+        pos <- df$position == 1
+        h <- diff(range(df$runningScore))/20
+        df$ymin[pos] <- -h
+        df$ymax[pos] <- h
+        df$geneList <- geneList
 
-    df$Description <- geneSetId
-    df.c = rbind(df.c, df)
+        df$Description <- geneSetId
+        df.c = rbind(df.c, df)
     }
     return(df.c)
 }
@@ -68,8 +67,12 @@ enrich_plot = function(geneList, geneSet, geneSetID, pre_ranked = FALSE,
 
     p <- ggplot(gsdata, aes_(x = ~x)) + xlab(NULL) + theme_classic(base_size) + 
     theme(panel.grid.major = element_line(colour = "grey92"), 
-    panel.grid.minor = element_line(colour = "grey92"), 
-    panel.grid.major.y = element_blank(), panel.grid.minor.y = element_blank()) + 
+        panel.grid.minor = element_line(colour = "grey92"), 
+        panel.grid.major.y = element_line(colour = "grey92"), 
+          panel.grid.minor.y = element_line(colour = "grey92"),
+          axis.line = element_blank(),
+         panel.border = element_rect(color = "lightgrey",fill = NA,size = .5),
+         axis.text = element_text(color = 'black')) + 
     scale_x_continuous(expand = c(0, 0))
     ## line
     p <- p + geom_hline(yintercept = 0, linetype = 'dashed', color = 'grey')
@@ -82,11 +85,13 @@ enrich_plot = function(geneList, geneSet, geneSetID, pre_ranked = FALSE,
     size = 1, data = subset(gsdata, position == 1))
     }
     p.res <- p + es_layer + theme(legend.position = c(0.8, 0.8), 
-    legend.title = element_blank(), legend.background = element_rect(fill = "transparent"))
-    p.res <- p.res + ylab("Running Enrichment Score") + theme(axis.text.x = element_blank(), 
-    axis.ticks.x = element_blank(), axis.line.x = element_blank(), 
-    plot.margin = margin(t = 0.2, r = 0.2, b = 0, l = 0.2, 
-    unit = "cm"))
+                legend.title = element_blank(), legend.background = element_rect(fill = "transparent"))
+    p.res <- p.res + ylab("Running Enrichment Score") + 
+                    theme(axis.text.x = element_blank(), 
+                        axis.ticks.x = element_blank(), 
+                        axis.line.x = element_blank(), 
+                        plot.margin = margin(t = 0.2, r = 0.2, b = 0, l = 0.2, 
+                        unit = "cm"), axis.line = element_blank())
     i <- 0
     for (term in unique(gsdata$Description)) {
     idx <- which(gsdata$ymin != 0 & gsdata$Description == 
@@ -98,8 +103,9 @@ enrich_plot = function(geneList, geneSet, geneSetID, pre_ranked = FALSE,
     p2 <- ggplot(gsdata, aes_(x = ~x)) + geom_linerange(aes_(ymin = ~ymin, 
     ymax = ~ymax, color = ~Description)) + xlab(NULL) + ylab(NULL) + 
     theme_classic(base_size) + theme(legend.position = "none", 
-    plot.margin = margin(t = -0.1, b = 0, unit = "cm"), axis.ticks = element_blank(), 
-    axis.text = element_blank(), axis.line.x = element_blank()) + 
+    plot.margin = margin(t = -0.1, b = 0, unit = "cm"), #axis.ticks = element_blank(), 
+                    axis.text = element_blank(), 
+                                     axis.line.x = element_blank()) + 
     scale_x_continuous(expand = c(0, 0)) + scale_y_continuous(expand = c(0, 
     0))
     if (length(geneSetID) == 1) {
@@ -136,30 +142,39 @@ enrich_plot = function(geneList, geneSet, geneSetID, pre_ranked = FALSE,
     p2 <- p2 + scale_color_manual(values = color)
     }
     }
-    if (pvalue_table) {
-    pd <- x[geneSetID, c("Description", "pvalue", "p.adjust")]
-    rownames(pd) <- pd$Description
-    pd <- pd[, -1]
-    pd <- round(pd, 4)
-    tp <- tableGrob2(pd, p.res)
-    p.res <- p.res + theme(legend.position = "none") + annotation_custom(tp, 
-    xmin = quantile(p.res$data$x, 0.5), xmax = quantile(p.res$data$x, 
-    0.95), ymin = quantile(p.res$data$runningScore, 
-    0.75), ymax = quantile(p.res$data$runningScore, 
-    0.9))
+#     return(p.res)
+    if (class(fgsea_res) == 'data.frame') {
+        pvalue_table = pvalue_table[order(pvalue_table$padj),]
+        pvalue_table = pvalue_table[!duplicated(pvalue_table$pathway),]
+        rownames(pvalue_table) <- as.vector(pvalue_table$pathway)
+        NES = pvalue_table[geneSetID, 'NES']
+        padj = pvalue_table[geneSetID, 'padj']
+#         pd <- pvalue_table[geneSetID, c("pathway", "pval", "padj", 'NES')]
+#         rownames(pd) <- pd$pathway
+#         pd <- pd[, -1]
+#         pd <- round(pd, 4)
+#         tp <- gridExtra::tableGrob(pd, p.res)
+        p.res = p.res+labs(title = paste0(title, '\n', 'NES = ', round(NES, 2), ', padj = ', format(padj, digits = 2, scientific = T)))
+
+#         p.res <- p.res + theme(legend.position = "none") + annotation_custom(tp, 
+#                 xmin = quantile(p.res$data$x, 0.5), xmax = quantile(p.res$data$x, 
+#                 0.95), ymin = quantile(p.res$data$runningScore, 
+#                 0.75), ymax = quantile(p.res$data$runningScore, 
+#                 0.9))
+    }else{
+        ## fgsea
+        fgres = as.data.frame(fgsea(geneSet, geneList))
+        rownames(fgres) = as.vector(fgres[,'pathway'])
+        NES = fgres[geneSetID, 'NES']
+        padj = fgres[geneSetID, 'padj']
+        ## label
+        p.res = p.res+labs(title = paste0(title, '\n', 'NES = ', round(NES, 2), ', padj = ', format(padj, digits = 2, scientific = T)))
     }
-    ## fgsea
-    fgres = as.data.frame(fgsea(geneSet[geneSetID], geneList))
-    rownames(fgres) = as.vector(fgres[,'pathway'])
-    NES = fgres[geneSetID, 'NES']
-    padj = fgres[geneSetID, 'padj']
-    ## label
-    p.res = p.res+labs(title = paste0(title, '\n', 'NES = ', round(NES, 2), ', padj = ', format(padj, digits = 2, scientific = T)))
-    
     plotlist <- list(p.res, p2, p.pos)[subplots]
     n <- length(plotlist)
-    plotlist[[n]] <- plotlist[[n]] + theme(axis.line.x = element_line(), 
-    axis.ticks.x = element_line(), axis.text.x = element_text())
+    plotlist[[n]] <- plotlist[[n]] + theme(
+                            axis.ticks.x = element_line(), axis.text.x = element_text(),
+                            axis.line = element_blank())
     if (length(subplots) == 1) {
         return(plotlist[[1]] + theme(plot.margin = margin(t = 0.2, 
             r = 0.2, b = 0.2, l = 0.2, unit = "cm")))
@@ -169,3 +184,4 @@ enrich_plot = function(geneList, geneSet, geneSetID, pre_ranked = FALSE,
     }
     cowplot::plot_grid(plotlist = plotlist, ncol = 1, align = "v", rel_heights = rel_heights)
 }
+
