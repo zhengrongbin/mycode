@@ -332,7 +332,7 @@ gsea <- function(rank_genes, kegg_gmt_list, prefix){
 
     fgseaRes$pathway = gsub('KEGG_', '', fgseaRes$pathway)
     fgseaRes = fgseaRes[order(-fgseaRes$NES),]
-    plot_df = subset(fgseaRes, padj <= 0.1)
+    plot_df = subset(fgseaRes, padj <= 0.1) 
     g = ggplot(plot_df, aes(x = NES, y = reorder(pathway, NES), colour=padj, size = size))+
     geom_count()+
     geom_point(shape = 1, color = 'black')+

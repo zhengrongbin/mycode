@@ -15,6 +15,8 @@ library('ComplexHeatmap')
 option_list <- list(
     make_option(c("-c", "--count"), type = "character", default=TRUE,
               help="path for count matrix, should be csv file, unique gene name in the first columns"),
+    make_option(c("-t", "--tpm"), type = "character", default=TRUE,
+              help="path for TPM matrix, should be csv file, unique gene name in the first columns"),
     make_option(c('-m', "--meta_desgin"), type = 'character', default=TRUE,
               help='design matrix for specifying comparison, columns are samples, rows are comparisons with first column as comparison name, then 1 as treatment, 0 as control, keep empty for other samples'),
     make_option(c("-g", "--gene_ont"), type = "character", default=FALSE,
@@ -37,6 +39,7 @@ opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
 count_path <- opt$count
+tpm_path <- opt$tpm
 design_path <- opt$meta_desgin
 protein_coding_path <- opt$protein_coding
 prefix <- opt$prefix
@@ -142,6 +145,7 @@ print('++++ read in')
 
 ## ======== read count
 cmat <- read.csv(count_path, row.names = 1)
+tpm <- read.csv(tpm_path, row.names = 1)
 design <- read.csv(design_path, row.names = 1)
 ## extract comparison
 comparisons <- lapply(rownames(design), function(x){
@@ -152,11 +156,13 @@ names(comparisons) <- rownames(design)
 
 ### do PCA and hclust
 print('++++ PCA and hcluster ++++')
-cmat.log = log10(cmat+1)
-var.3k = names(sort(apply(cmat.log, 1, var), decreasing = T)[1:3000])
-cmat.log = cmat.log[var.3k,]
+tpm.log = log10(tpm+1)
+## remove all zero
+tpm.log = tpm.log[-which(apply(tpm.log, 1, function(x) all(x == 0))),]
+var.3k = names(sort(apply(tpm.log, 1, var), decreasing = T)[1:3000])
+tpm.log.scale.var = t(scale(t(tpm.log)))[var.3k,]
 
-pc.cr=prcomp(t(cmat.log))
+pc.cr=prcomp(t(tpm.log))
 imp = summary(pc.cr)$importance
 
 ### plot pca
@@ -175,18 +181,17 @@ g = ggplot(data = plot_df, aes(x = PC1, y = PC2))+
         xlab(paste0('PC1 (', round(imp[2,'PC1']*100, 2), '%)'))+
         ylab(paste0('PC2 (', round(imp[2,'PC2']*100, 2), '%)'))
 
-pdf(paste0(prefix, '.pca.pdf'), width = 4, height = 3.5)
+pdf(paste0(prefix, '_pca.pdf'), width = 5, height = 4.5)
 print(g)
 dev.off()
 
 ## hclust
-pdf(paste0(prefix, '.hclust.pdf'), width = 4, height = 3.5)
-plot(hclust(dist(t(cmat.log))))
+pdf(paste0(prefix, '_hclust.pdf'), width = 5, height = 4.5)
+plot(hclust(dist(t(tpm.log))))
 dev.off()
 ## top variable gene heatmap
-cmat.log.scale = t(scale(t(cmat.log)))
-pdf(paste0(prefix, '.heatmap.pdf'), width = 5, height = 4.5)
-Heatmap(cmat.log.scale, show_row_names = F, name='Scaled Exp', show_row_dend = F)
+pdf(paste0(prefix, '_heatmap.pdf'), width = 5, height = 5.5)
+Heatmap(tpm.log.scale.var, show_row_names = F, name='Scaled Exp', show_row_dend = T)
 dev.off()
 
 ### do each DESeq2
