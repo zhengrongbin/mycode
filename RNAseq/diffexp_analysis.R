@@ -145,7 +145,9 @@ print('++++ read in')
 
 ## ======== read count
 cmat <- read.csv(count_path, row.names = 1)
+if (tpm_path != NULL & tpm_path != FALSE){
 tpm <- read.csv(tpm_path, row.names = 1)
+}
 design <- read.csv(design_path, row.names = 1)
 ## extract comparison
 comparisons <- lapply(rownames(design), function(x){
@@ -156,7 +158,11 @@ names(comparisons) <- rownames(design)
 
 ### do PCA and hclust
 print('++++ PCA and hcluster ++++')
-tpm.log = log10(tpm+1)
+if (tpm_path != NULL & tpm_path != FALSE){
+    tpm.log = log10(tpm+1)
+}else{
+    tpm.log = log10(cmat+1)
+}
 ## remove all zero
 tpm.log = tpm.log[-which(apply(tpm.log, 1, function(x) all(x == 0))),]
 var.3k = names(sort(apply(tpm.log, 1, var), decreasing = T)[1:3000])

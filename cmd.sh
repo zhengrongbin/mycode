@@ -4,17 +4,27 @@ curl -H "Accept: application/vnd.github+json" \
  -H "Authorization: zhengrongbin <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>" \
  https://api.github.com/repos/zhengrongbin/MEBOCOST/traffic/clones
 
+chromsize=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/Genome/mm10/mm10.chromSize
+bam=ChIP_04282023/H2AZ_ab4174_minusCL_unique.sorted.bam
+bam=${bam/"/"/_}
+label=H2AZ_ab4174_minusCL_vs_IgG
+
+bam2=${bam/"/"/_}
+/lab-share/Cardio-Chen-e2/Public/rongbinzheng/anaconda3/bin/wigToBigWig -clip ${label}/pooled/${bam2}.dedup.bgsub.Fnor.wig $chromsize ${label}/pooled/${bam2}.dedup.bgsub.Fnor.wig.bw
 
 ## load whole document
 docker run -it --name routine -p 8080:8080 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents routine:latest
 
 docker run -it --name seurat -p 8080:8080 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents seurat:v3.1.5
 
+docker run -it --name seurat -p 8081:8081 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents seurat:v2.0.1
+
 ## for MECOM
 docker run -it --name MECOM -p 8880:8880 -v /Users/rongbinzheng/Documents/BCH/ChenLab:/home/ChenLab -v /Users/rongbinzheng/Documents/CommonData:/home/CommonData seurat:v2.0.1
 
 ## for compass
-docker run -it --name compass -p 8880:8880 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents  compass:latest
+docker run -it --name compass -p 8889:8889 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents  compass:latest
+jupyter notebook --allow-root --port=8889 --no-browser --ip=0.0.0.0 
 
 ## for vue
 docker run -it --name vue -p 8880:8880 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents  vue:latest
@@ -24,9 +34,26 @@ jupyter notebook --allow-root --port=8080 --no-browser --ip=0.0.0.0
 remotes::install_version(package = 'Seurat', version = package_version('2.0.1'))
 
 ## E2
-jupyter notebook --no-browser --port 8900 --NotebookApp.iopub_data_rate_limit=10000000000 --ip=0.0.0.0 --NotebookApp.allow_origin=* --allow-root
+jupyter notebook --no-browser --port 8990 --NotebookApp.iopub_data_rate_limit=10000000000 --ip=0.0.0.0 --NotebookApp.allow_origin=* --allow-root
 
-ssh -N -L 8900:compute-1-6.tch.harvard.edu:8900 -o ServerAliveInterval=30 ch228298@e2.tch.harvard.edu
+ssh -N -L 8900:compute-5-0-3.tch.harvard.edu:8900 -o ServerAliveInterval=30 ch228298@e2.tch.harvard.edu
+
+chr8,HAVANA,gene,83290352,83298452,,+,0,ENSMUSG00000031710.4,protein_coding,Ucp1,2,MGI:98894,OTTMUSG00000061515.1,,,,,,,,,,,
+
+83288352 83292352
+
+awk '{
+    if ( $2 == chr8 ) {
+        if ( $3 > 83288352 && $3 < 83292352 ) {
+            print
+        }
+    }else if ( $4 == chr8) {
+        if ( $5 > 83288352 && $5 < 83292352 ) {
+            print
+        }
+    }
+}' chr8.pairs > test.pairs
+
 
 ## mghpcc
 ## in mghpcc run:
@@ -855,8 +882,8 @@ install.packages("testthat",lib=.libPaths()[1],repos="http://cran.rstudio.com/")
 install.packages("reshape2",lib=.libPaths()[1],repos="http://cran.rstudio.com/")
 install.packages("pheatmap",lib=.libPaths()[1],repos="http://cran.rstudio.com/")
 
-#hicrep from the hicrep paper
-#install.packages("Supplemental_hicrep_1.0.1.tar.gz",dependencies="logical")
+# hicrep from the hicrep paper
+# install.packages("Supplemental_hicrep_1.0.1.tar.gz",dependencies="logical")
 
 #install newest hicrep
 biocLite("hicrep", lib=.libPaths()[1])
@@ -866,9 +893,559 @@ for i in KD shNT
 do 
     for j in minusCL plusCL
     do
-        mv ${i}_${j}_ATAC_unique.sorted.bam ${i}_${j}_rep3_unique.sorted.bam
+        mv ${i}_${j}_ATAC.rep1_peaks.narrowPeak ${i}_${j}_rep3.rep1_peaks.narrowPeak
     done
 done
+
+
+ wiq_result/H2AZ_vs_IgG_pooled_adipo_H2A.Z_ChIP_unique.sorted.bam.dedup.bgsub.Fnor.qnor.wig
+ wiq_result/H2AZ_CL_vs_IgG_pooled_thermo_adipo_H2A.Z_ChIP_unique.sorted.bam.dedup.bgsub.Fnor.qnor.wig
+
+
+pairtools merge -o ${pair_new} --nproc 16 ${name}_rep1.pairs.mapq5.pairs \
+${name}_rep2.pairs.mapq5.pairs \
+${name}_rep3.pairs.mapq5.pairs \
+${name}_rep4.pairs.mapq5.pairs \
+${name}_rep1_pilot.pairs.mapq5.pairs \
+${name}_rep2_pilot.pairs.mapq5.pairs \
+${name}_rep3_pilot.pairs.mapq5.pairs \
+${name}_rep4_pilot.pairs.mapq5.pairs 
+
+source /lab-share/Cardio-Chen-e2/Public/rongbinzheng/anaconda3/bin/activate
+for i in shNT KD
+do
+    for j in minusCL plusCL
+    do
+        for n in 1 2 3 4
+        do
+            name=${i}_${j}_rep${n} #'shNT_plusCL_rep1'
+            echo ++$name
+            pair_new=${name}/${name}.pairs.mapq5.pairs
+            chromsize=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/Genome/mm10/mm10.chromSize
+
+            echo "+++convert to cool"
+            for r in 2500000 1000000 500000 250000 100000 50000 25000 10000 5000 2000 1000
+            do
+                echo ++++${r}
+                cooler_path=${pair_new}_${r}.cool
+                cooler cload pairs --assembly mm10 -c1 2 -p1 3 -c2 4 -p2 5 ${chromsize}:${r} ${pair_new} ${cooler_path}
+                echo ++++balance
+                cooler balance ${cooler_path}
+            done
+        done
+    done
+done
+
+
+
+import os,sys
+import pandas as pd
+
+path=sys.argv[1]
+
+files = [os.path.join(path, x) for x in os.listdir(path) if x.endswith('_50000.txt.gz')]
+for f in files:
+    d = pd.read_csv(f, header = None, sep = '\t', compression = 'gzip')
+    d[0] = d[0].str.rstrip('chr')
+    d[2] = d[2].str.rstrip('chr')
+    d.to_csv(f+'.new.gz', header = None, index = None, sep = '\t', compression = 'gzip')
+
+
+for i in `ls *.txt.gz`; do zcat $i |sed 's/chr//g' |gzip > ${i}.new.gz; done
+for i in `ls *.txt.gz`; do mv -f ${i}.new.gz ${i}; done
+
+
+
+python cellphonedb_run.py CCI_datasets/human_paad/PDAC_A_ST1/sc_meta.tsv CCI_datasets/human_paad/PDAC_A_ST1/sc_count.tsv cellphonedb_output_human_PDAC_A_ST1
+python cellphonedb_run.py CCI_datasets/human_paad/PDAC_B_ST3/sc_meta.tsv CCI_datasets/human_paad/PDAC_B_ST3/sc_counts.tsv cellphonedb_output_human_PDAC_B_ST3
+python cellphonedb_run.py CCI_datasets/human_scc/P10_rep1_GSM4284325/sc_meta.tsv CCI_datasets/human_scc/P10_rep1_GSM4284325/sc_counts.tsv cellphonedb_output_human_scc_P10_rep1_GSM4284325
+python cellphonedb_run.py CCI_datasets/human_scc/P2_rep2_GSM4284317/sc_meta.tsv CCI_datasets/human_scc/P2_rep2_GSM4284317/sc_count.tsv cellphonedb_output_human_scc_P2_rep2_GSM4284317
+python cellphonedb_run.py CCI_datasets/human_scc/P5_rep3_GSM4284321/sc_meta.tsv CCI_datasets/human_scc/P5_rep3_GSM4284321/sc_counts.tsv cellphonedb_output_human_scc_P5_rep3_GSM4284321
+
+
+
+echo "++++ activating"
+source /programs/biogrids.shrc
+
+
+computeMatrix reference-point -S H2AZ_vs_IgG_pooled_adipo_H2A.Z_ChIP_unique.sorted.bam.dedup.bgsub.Fnor.qnor.wig.bw H2AZ_CL_vs_IgG_pooled_thermo_adipo_H2A.Z_ChIP_unique.sorted.bam.dedup.bgsub.Fnor.qnor.wig.bw \
+                             -R UpTss_shNT_plusCL_vs_minusCL.bed -a 5000 -b 5000 \
+                             --outFileName ChIP_2021_UpTss_shNT_plusCL_vs_minusCL_Tss5kb.mat.gz --numberOfProcessors 16
+
+plotHeatmap -m ChIP_2021_UpTss_shNT_plusCL_vs_minusCL_Tss5kb.mat.gz \
+      -out ChIP_2021_UpTss_shNT_plusCL_vs_minusCL_Tss5kb.mat.png \
+      --colorMap Reds \
+      --refPointLabel 'center' --xAxisLabel 'distance (bp)' --yAxisLabel 'peaks' \
+      --samplesLabel minusCL plusCL --kmeans 3
+
+
+
+computeMatrix reference-point -S H2AZ_vs_IgG_pooled_adipo_H2A.Z_ChIP_unique.sorted.bam.dedup.bgsub.Fnor.qnor.wig.bw H2AZ_CL_vs_IgG_pooled_thermo_adipo_H2A.Z_ChIP_unique.sorted.bam.dedup.bgsub.Fnor.qnor.wig.bw \
+                             -R DownTss_shNT_plusCL_vs_minusCL.bed -a 5000 -b 5000 \
+                             --outFileName ChIP_2021_DownTss_shNT_plusCL_vs_minusCL_Tss5kb.mat.gz --numberOfProcessors 16
+
+plotHeatmap -m ChIP_2021_DownTss_shNT_plusCL_vs_minusCL_Tss5kb.mat.gz \
+      -out ChIP_2021_DownTss_shNT_plusCL_vs_minusCL_Tss5kb.mat.png \
+      --colorMap Reds \
+      --refPointLabel 'center' --xAxisLabel 'distance (bp)' --yAxisLabel 'peaks' \
+      --samplesLabel minusCL plusCL --kmeans 3
+echo "++++ Finished"
+
+
+import os,sys
+import _bw
+import numpy as np
+import pandas as pd
+
+d=[1000, 10000, 30000, 100000]
+path='/temp_work/ch228298/H2AZ_Danpos/qnor_bsub_bw'
+bwFiles = os.listdir(path)
+
+tss = '/lab-share/Cardio-Chen-e2/Public/rongbinzheng/Genome/mm10/gencode.vM23.annotation.protein_coding.tss.csv'
+rp_res = {}
+for f in bwFiles:
+    label=f.split('.sorted.bam')[0]
+    f = os.path.join(path, f)
+    for dd in d:
+        if str(dd) not in rp_res:
+            rp_res[str(dd)] = {}
+        _bw.getrp(f, tss, label+'_lisaRP_%sDecay.txt'%dd, dd, 0, 0)
+        rp_res[label]=pd.read_csv(label+'_lisaRP_%sDecay.txt'%dd, sep = '\t', header = None)
+
+for dd in d:
+    rp_res_mat = pd.DataFrame(map(lambda x: rp_res[dd][x][4], rp_res[dd]))
+    rp_res_mat = rp_res_mat.T
+    rp_res_mat.index = rp_res[label][3].tolist()
+    rp_res_mat.columns = rp_res.keys()
+    rp_res_mat.to_csv('combined_lisaRP_orignal_%sDecay.csv'%dd)
+
+
+d1 = read.csv('secretions.tsv', sep = '\t', row.names = 1)
+d2 = read.csv('../../mBAT_cold2/secretions.tsv', sep = '\t', row.names = 1)
+
+
+cor.test(d1[grepl('e]$', rownames(d1)),1], d2[grepl('e]$', rownames(d2)),1])
+
+
+
+awk '{
+    if ( $0 ~ /^#chromsize/ ) {
+        if ( $0 ~ /chr[0-9]|chrX|chrY|chrM/ ) {
+            print
+        }
+    }else if ( $0 ~ /^#samheader/ && $0 ~ /SQ/) {
+        if ( $0 ~ /chr[0-9]|chrX|chrY|chrM/ ) {
+            print
+        }
+    }else if ( $0 ~ /^#/ ){
+        print
+    }else{
+        if ( $2 ~ /chr[0-9]|chrX|chrY|chrM/ && $4 ~ /chr[0-9]|chrX|chrY|chrM/ && $9 > 5 && $10 > 5 && (($3 - $5) > 100 || ($3 - $5) < -100)){
+            print
+        }
+    }
+}' ${pair} > test.pair
+
+awk 'if ( $2 ~ /chr[0-9]|chrX|chrY|chrM/ && $4 ~ /chr[0-9]|chrX|chrY|chrM/ && $9 > 5 && $10 > 5 && $(($3 >= $5 ? $3 - $5 : $5 - $3)) < 100){
+            print
+        }' test.pair > test2.pair
+
+awk '{print $(($3 >= $5 ? $3 - $5 : $5 - $3))}' test2.pair 
+awk '{print $($3 - $5) }' test2.pair 
+
+  KD_plusCL_H2AZ_abcam:
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H2AZ-abcam_S12_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H2AZ-abcam_S12_R2.fq.gz
+  KD_plusCL_H2AZ_AM_rep1:
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H2AZ-Active-Motif-rep1_S2_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H2AZ-Active-Motif-rep1_S2_R2.fq.gz
+  KD_plusCL_H2AZ_AM_rep2:
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H2AZ-Active-Motif-rep2_S10_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H2AZ-Active-Motif-rep2_S10_R2.fq.gz
+  KD_plusCL_H3K27ac_rep1:
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H3K27ac-rep1_S4_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H3K27ac-rep1_S4_R2.fq.gz
+  KD_plusCL_H3K27ac_rep2:
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H3K27ac-rep2_S14_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H3K27ac-rep2_S14_R2.fq.gz
+  KD_plusCL_H3K4me3_rep1:
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H3K4me3-rep1_S6_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H3K4me3-rep1_S6_R2.fq.gz
+  KD_plusCL_H3K4me3_rep2:
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H3K4me3-rep2_S16_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-H3K4me3-rep2_S16_R2.fq.gz
+  KD_plusCL_IgG:
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-IgG_S8_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/KD-CL-IgG_S8_R2.fq.gz
+  shNT_plusCL_H2AZ_abcam:
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H2AZ-abcam_S11_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H2AZ-abcam_S11_R2.fq.gz
+  shNT_plusCL_H2AZ_AM_rep1:
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H2AZ-Active-Motif-rep1_S1_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H2AZ-Active-Motif-rep1_S1_R2.fq.gz
+  shNT_plusCL_H2AZ_AM_rep2:
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H2AZ-Active-Motif-rep2_S9_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H2AZ-Active-Motif-rep2_S9_R2.fq.gz
+  shNT_plusCL_H3K27ac_rep1:
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H3K27ac-rep1_S3_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H3K27ac-rep1_S3_R2.fq.gz
+  shNT_plusCL_H3K27ac_rep2:
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H3K27ac-rep2_S13_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H3K27ac-rep2_S13_R2.fq.gz
+  shNT_plusCL_H3K4me3_rep1:
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H3K4me3-rep1_S5_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H3K4me3-rep1_S5_R2.fq.gz
+  shNT_plusCL_H3K4me3_rep2:
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H3K4me3-rep2_S15_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-H3K4me3-rep2_S15_R2.fq.gz
+  shNT_plusCL_IgG:
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-IgG_S7_R1.fq.gz
+    - /temp_work/ch228298/ChIP_202306/ready/NT-CL-IgG_S7_R2.fq.gz
+
+
+
+sh /lab-share/Cardio-Chen-e2/Public/rongbinzheng/CommonCode/Danpos_bash.sh ../ChIP_202306/analysis/align/KD_plusCL_H2AZ_abcam/KD_plusCL_H2AZ_abcam_unique.sorted.bam ../ChIP_202306/analysis/align/KD_plusCL_IgG/KD_plusCL_IgG_unique.sorted.bam ChIP_202306_KD_plusCL_H2AZabcam_vs_IgG
+sh /lab-share/Cardio-Chen-e2/Public/rongbinzheng/CommonCode/Danpos_bash.sh ../ChIP_202306/analysis/align/KD_plusCL_H2AZ_AM_rep1/KD_plusCL_H2AZ_AM_rep1_unique.sorted.bam ../ChIP_202306/analysis/align/KD_plusCL_IgG/KD_plusCL_IgG_unique.sorted.bam ChIP_202306_KD_plusCL_H2AZ_AM_vs_IgG_rep1
+sh /lab-share/Cardio-Chen-e2/Public/rongbinzheng/CommonCode/Danpos_bash.sh ../ChIP_202306/analysis/align/KD_plusCL_H2AZ_AM_rep2/KD_plusCL_H2AZ_AM_rep2_unique.sorted.bam ../ChIP_202306/analysis/align/KD_plusCL_IgG/KD_plusCL_IgG_unique.sorted.bam ChIP_202306_KD_plusCL_H2AZ_AM_vs_IgG_rep2
+sh /lab-share/Cardio-Chen-e2/Public/rongbinzheng/CommonCode/Danpos_bash.sh ../ChIP_202306/analysis/align/shNT_plusCL_H2AZ_abcam/shNT_plusCL_H2AZ_abcam_unique.sorted.bam ../ChIP_202306/analysis/align/shNT_plusCL_IgG/shNT_plusCL_IgG_unique.sorted.bam ChIP_202306_shNT_plusCL_H2AZabcam_vs_IgG
+sh /lab-share/Cardio-Chen-e2/Public/rongbinzheng/CommonCode/Danpos_bash.sh ../ChIP_202306/analysis/align/shNT_plusCL_H2AZ_AM_rep1/shNT_plusCL_H2AZ_AM_rep1_unique.sorted.bam ../ChIP_202306/analysis/align/shNT_plusCL_IgG/shNT_plusCL_IgG_unique.sorted.bam ChIP_202306_shNT_plusCL_H2AZ_AM_vs_IgG_rep1
+sh /lab-share/Cardio-Chen-e2/Public/rongbinzheng/CommonCode/Danpos_bash.sh ../ChIP_202306/analysis/align/shNT_plusCL_H2AZ_AM_rep2/shNT_plusCL_H2AZ_AM_rep2_unique.sorted.bam ../ChIP_202306/analysis/align/shNT_plusCL_IgG/shNT_plusCL_IgG_unique.sorted.bam ChIP_202306_shNT_plusCL_H2AZ_AM_vs_IgG_rep2
+
+### plot heatmap
+
+source /lab-share/Cardio-Chen-e2/Public/rongbinzheng/anaconda3/bin/activate
+chromsize=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/Genome/mm10/mm10.chromSize
+
+for pair in `ls ../../../*_rep*/*.pairs.mapq5.pairs`
+do
+    echo "+++filter mapq"
+    pair_new=`basename ${pair}`
+    awk '{
+        if ( $0 ~ /^#chromsize/ ) {
+            if ( $0 ~ /chr[0-9]|chrX|chrY|chrM/ ) {
+                print
+            }
+        }else if ( $0 ~ /^#samheader/ && $0 ~ /SQ/) {
+            if ( $0 ~ /chr[0-9]|chrX|chrY|chrM/ ) {
+                print
+            }
+        }else if ( $0 ~ /^#/ ){
+            print
+        }else{
+            if ( $2 ~ /chr[0-9]|chrX|chrY|chrM/ && $4 ~ /chr[0-9]|chrX|chrY|chrM/ && $9 > 5 && $10 > 5 && (($3 - $5) > 100 || ($3 - $5) < -100)){
+                print
+            }
+        }
+    }' ${pair} > ${pair_new}
+
+    echo "+++convert to cool"
+    for r in 2500000 1000000 500000 250000 100000 50000 25000 10000 5000 2000 1000
+    do
+        echo ++++${r}
+        cooler_path=cool/${pair_new}_${r}.cool
+        cooler cload pairs --assembly mm10 -c1 2 -p1 3 -c2 4 -p2 5 ${chromsize}:${r} ${pair_new} ${cooler_path}
+        echo ++++balance
+        cooler balance ${cooler_path}
+    done
+
+d1 = pd.read_csv('shNT_plusCL_mapq5_merge.pairs_5000.bedpe', sep = '\t', header = None)
+d2 = pd.read_csv('shNT_minusCL_mapq5_merge.pairs_5000.bedpe', sep = '\t', header = None)
+d1_loop = d1[d1[6] > 0.98]
+d2_loop = d2[d2[6] > 0.98]
+
+d1_index = d1_loop[0]+':'+d1_loop[1].astype('str')+':'+d1_loop[2].astype('str')+':'+d1_loop[3]+':'+d1_loop[4].astype('str')+':'+d1_loop[5].astype('str')
+d2_index = d2_loop[0]+':'+d2_loop[1].astype('str')+':'+d2_loop[2].astype('str')+':'+d2_loop[3]+':'+d2_loop[4].astype('str')+':'+d2_loop[5].astype('str')
+
+d = pd.merge(d1[[6,7]], d2[[6,7]], left_index = True, right_index = True)
+
+
+for i in adipose bone_marrow breast_milk liver pancreas adrenal_gland brain kidney lung skin
+do
+echo '#!/bin/bash' > ${i}_comp.sbatch
+echo "#SBATCH --partition=cbp-compute # queue to be used" >> ${i}_comp.sbatch
+echo "#SBATCH --time=100:00:00 # Running time (in hours-minutes-seconds)" >> ${i}_comp.sbatch
+echo "#SBATCH --job-name=${i} # Job name" >> ${i}_comp.sbatch
+echo "#SBATCH --mail-type=BEGIN,END,FAIL # send and email when the job begins, ends or fails" >> ${i}_comp.sbatch
+echo "#SBATCH --mail-user=your_email_address # Email address to send the job status" >> ${i}_comp.sbatch
+echo "#SBATCH --output=${i}.txt # Name of the output file" >> ${i}_comp.sbatch
+echo "#SBATCH --nodes=1 # Number of compute nodes" >> ${i}_comp.sbatch
+echo "#SBATCH --ntasks=12 # Number of cpu cores on one node" >> ${i}_comp.sbatch
+echo "#SBATCH --mem=50G" >> ${i}_comp.sbatch
+echo "source /lab-share/Cardio-Chen-e2/Public/rongbinzheng/anaconda3/bin/activate" >> ${i}_comp.sbatch
+echo "module load singularity" >> ${i}_comp.sbatch
+echo "echo 'runing compass'" >> ${i}_comp.sbatch
+t=${i}
+exp_tsv=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/metabolism/DISCO/${t}_avg_exp.tsv
+out_dir=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/metabolism/DISCO/compass_res/${t}_res
+temp_dir=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/metabolism/DISCO/compass_res/${t}_temp
+echo "singularity run --bind /lab-share/Cardio-Chen-e2/Public/rongbinzheng:/lab-share/Cardio-Chen-e2/Public/rongbinzheng /lab-share/Cardio-Chen-e2/Public/rongbinzheng/tmp/compass sh /lab-share/Cardio-Chen-e2/Public/rongbinzheng/metabolism/test_compass/compass_run.sh ${exp_tsv} homo_sapiens ${out_dir} ${temp_dir} 12" >> ${i}_comp.sbatch
+echo "echo 'Finished'" >> ${i}_comp.sbatch
+done
+
+
+https://zenodo.org/record/7381371/files/disco_adipose_v01.h5ad?download=1
+https://zenodo.org/record/7381371/files/disco_bone_marrow_v01.h5ad?download=1
+
+
+compass_met_ann = pd.read_csv('/lab-share/Cardio-Chen-e2/Public/rongbinzheng/software/Compass/compass/Resources/Recon2_export/met_md.csv')
+
+compass_rxn_ann = pd.read_csv('/lab-share/Cardio-Chen-e2/Public/rongbinzheng/software/Compass/compass/Resources/Recon2_export/rxn_md.csv')
+
+met_ann = pd.read_csv('/lab-share/Cardio-Chen-e2/Public/rongbinzheng/software/MEBOCOST/data/mebocost_db/common/metabolite_annotation_HMDB_summary.tsv',
+                     sep = '\t')
+alias = {str(i).upper():[str(x).upper() for x in str(j).split('; ')] for i,j in met_ann[['metabolite', 'synonyms_name']].values.tolist()}
+
+
+python /lab-share/Cardio-Chen-e2/Public/rongbinzheng/software/peakachu/diffPeakachu/pair-probs.py shNT_plusCL_mapq5_merge.pairs_5000_loops.0.95.bedpe shNT_minusCL_mapq5_merge.pairs_5000_loops.0.95.bedpe shNT_plusCL-minusCL_union.loops.0.95.bedpe
+python /lab-share/Cardio-Chen-e2/Public/rongbinzheng/software/peakachu/diffPeakachu/diffPeakachu.py shNT_plusCL_mapq5_merge.pairs_5000_loops.0.95.bedpe shNT_minusCL_mapq5_merge.pairs_5000_loops.0.95.bedpe shNT_plusCL-minusCL_union.loops.0.95.bedpe
+
+python /lab-share/Cardio-Chen-e2/Public/rongbinzheng/software/peakachu/diffPeakachu/pair-probs.py shNT_plusCL_mapq5_merge.pairs_5000_loops.0.98.bedpe shNT_minusCL_mapq5_merge.pairs_5000_loops.0.98.bedpe shNT_plusCL-minusCL_union.loops.0.98.bedpe
+python /lab-share/Cardio-Chen-e2/Public/rongbinzheng/software/peakachu/diffPeakachu/diffPeakachu.py shNT_plusCL_mapq5_merge.pairs_5000_loops.0.98.bedpe shNT_minusCL_mapq5_merge.pairs_5000_loops.0.98.bedpe shNT_plusCL-minusCL_union.loops.0.98.bedpe
+
+wig1=ChIP_04082022_H2AZ_plusCL_unique_rep1.sorted.bam.dedup.bgsub.Fnor.wig 
+wig2=../wiq_result/ChIP_04082022_H2AZ_minusCL_unique_rep1.sorted.bam.dedup.bgsub.Fnor.qnor.wig 
+label=ChIP_04082022_plusCL_vs_minusCL_H2AZ_rep1
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dregion ${wig1}:${wig2} -o qnorm/dregion/${label}
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dpeak ${wig1}:${wig2} -o qnorm/dpeak/${label}
+
+wig1=../wiq_result/ChIP_04082022_H2AZ_plusCL_unique_rep2.sorted.bam.dedup.bgsub.Fnor.qnor.wig 
+wig2=../wiq_result/ChIP_04082022_H2AZ_minusCL_unique_rep2.sorted.bam.dedup.bgsub.Fnor.qnor.wig
+label=ChIP_04082022_plusCL_vs_minusCL_H2AZ_rep2
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dregion ${wig1}:${wig2} -o qnorm/dregion/${label}
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dpeak ${wig1}:${wig2} -o qnorm/dpeak/${label}
+
+wig1=../wiq_result/ChIP_04082022_H2AZ_plusCL_unique_rep3.sorted.bam.dedup.bgsub.Fnor.qnor.wig  
+wig2=../wiq_result/ChIP_04082022_H2AZ_minusCL_unique_rep3.sorted.bam.dedup.bgsub.Fnor.qnor.wig 
+label=ChIP_04082022_plusCL_vs_minusCL_H2AZ_rep3
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dregion ${wig1}:${wig2} -o qnorm/dregion/${label}
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dpeak ${wig1}:${wig2} -o qnorm/dpeak/${label}
+
+wig1=../wiq_result/ChIP_04282023_H2AZ_ab4174_plusCL_unique.sorted.bam.dedup.bgsub.Fnor.qnor.wig 
+wig2=../wiq_result/ChIP_04282023_H2AZ_ab4174_minusCL_unique.sorted.bam.dedup.bgsub.Fnor.qnor.wig 
+label=ChIP_04282023_H2AZ_ab4174_plusCL_vs_minusCL_H2AZ_rep1
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dregion ${wig1}:${wig2} -o qnorm/dregion/${label}
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dpeak ${wig1}:${wig2} -o qnorm/dpeak/${label}
+
+wig1=../wiq_result/ChIP_04282023_H2AZ_AM_plusCL_unique.sorted.bam.dedup.bgsub.Fnor.qnor.wig 
+wig2=../wiq_result/ChIP_04282023_H2AZ_AM_minusCL_unique.sorted.bam.dedup.bgsub.Fnor.qnor.wig 
+label=ChIP_04282023_H2AZ_AM_plusCL_vs_minusCL_H2AZ_rep1
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dregion ${wig1}:${wig2} -o qnorm/dregion/${label}
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dpeak ${wig1}:${wig2} -o qnorm/dpeak/${label}
+
+wig1=CUTRUN_01162023_H2AZ_plusCL_rep1_unique.sorted.bam.dedup.bgsub.Fnor.wig 
+wig2=../wiq_result/CUTRUN_01162023_H2AZ_minusCL_rep1_unique.sorted.bam.dedup.bgsub.Fnor.qnor.wig 
+label=CUTRUN_01162023_H2AZ_ab4174_plusCL_vs_minusCL_H2AZ_rep1
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dregion ${wig1}:${wig2} -o qnorm/dregion/${label}
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dpeak ${wig1}:${wig2} -o qnorm/dpeak/${label}
+
+wig1=../wiq_result/CUTRUN_01162023_H2AZ_plusCL_rep2_unique.sorted.bam.dedup.bgsub.Fnor.qnor.wig 
+wig2=../wiq_result/CUTRUN_01162023_H2AZ_minusCL_rep2_unique.sorted.bam.dedup.bgsub.Fnor.qnor.wig 
+label=CUTRUN_01162023_H2AZ_ab4174_plusCL_vs_minusCL_H2AZ_rep2
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dregion ${wig1}:${wig2} -o qnorm/dregion/${label}
+python.danpos2 /programs/x86_64-linux/danpos2/2.2.2/danpos.py dpeak ${wig1}:${wig2} -o qnorm/dpeak/${label}
+
+
+Rscript neurochat_run.R CCI_datasets/human_heart/sc_normed.tsv CCI_datasets/human_heart/heart_sc_meta.tsv human_heart
+Rscript neurochat_run.R CCI_datasets/mouse_cortex/sc_normed.tsv CCI_datasets/mouse_cortex/sc_meta.tsv mouse_cortex
+Rscript neurochat_run.R CCI_datasets/human_intestinal/ST_A3_GSM4797918/sc_normed.tsv CCI_datasets/human_intestinal/ST_A3_GSM4797918/sc_meta.tsv human_intestinal_A3
+Rscript neurochat_run.R CCI_datasets/human_intestinal/ST_A4_GSM4797919/sc_normed.tsv CCI_datasets/human_intestinal/ST_A4_GSM4797919/sc_meta.tsv human_intestinal_A4
+Rscript neurochat_run.R CCI_datasets/human_paad/PDAC_A_ST1/sc_normed.tsv CCI_datasets/human_paad/PDAC_A_ST1/sc_meta.tsv human_PDAC_A
+Rscript neurochat_run.R CCI_datasets/human_paad/PDAC_B_ST3/sc_normed.tsv CCI_datasets/human_paad/PDAC_B_ST3/sc_meta.tsv human_PDAC_B
+Rscript neurochat_run.R CCI_datasets/human_scc/P10_rep1_GSM4284325/sc_normed.tsv CCI_datasets/human_scc/P10_rep1_GSM4284325/sc_meta.tsv human_SCC_P10
+Rscript neurochat_run.R CCI_datasets/human_scc/P2_rep2_GSM4284317/sc_normed.tsv CCI_datasets/human_scc/P2_rep2_GSM4284317/sc_meta_TN_Epithelial.tsv human_SCC_P2
+Rscript neurochat_run.R CCI_datasets/human_scc/P5_rep3_GSM4284321/sc_normed.tsv CCI_datasets/human_scc/P5_rep3_GSM4284321/sc_meta.tsv human_SCC_P5
+
+
+
+for i in `ls DU145_AAVS1_dmso*`; do sbatch -A cbp $i; done
+for i in `ls DU145_AAVS1_VE822*`; do sbatch -A cbp $i; done
+for i in `ls DU145_KPNA3_dmso*`; do sbatch -A cbp $i; done
+for i in `ls DU145_KPNA3_VE822*`; do sbatch -A cbp $i; done
+for i in `ls 22RV1_AAVS1_dmso*`; do sbatch -A cbp $i; done
+for i in `ls 22RV1_AAVS1_VE822*`; do sbatch -A cbp $i; done
+for i in `ls 22RV1_KPNA3_dmso*`; do sbatch -A cbp $i; done
+for i in `ls 22RV1_KPNA3_VE822*`; do sbatch -A cbp $i; done
+
+#!/bin/bash
+#SBATCH --partition=bch-compute # queue to be used
+#SBATCH --time=5:00:00 # Running time (in hours-minutes-seconds)
+#SBATCH --job-name=run2 # Job name
+#SBATCH --mail-type=BEGIN,END,FAIL # send and email when the job begins, ends or fails
+#SBATCH --mail-user=your_email_address # Email address to send the job status
+#SBATCH --output=output_%A_%a.txt # Name of the output file
+#SBATCH --nodes=1 # Number of compute nodes
+#SBATCH --ntasks=16 # Number of cpu cores on one node
+#SBATCH --mem=20G
+
+echo "++++ activating"
+source /programs/biogrids.shrc
+
+bed=
+computeMatrix reference-point -S /temp_work/ch228298/ChIP_202306/analysis/peaks/shNT_plusCL_H3K27ac.rep1/shNT_plusCL_H3K27ac.rep1_treat_pileup.bw \
+                            /temp_work/ch228298/ChIP_202306/analysis/peaks/shNT_plusCL_H3K27ac.rep2/shNT_plusCL_H3K27ac.rep2_treat_pileup.bw \
+                            /temp_work/ch228298/ChIP_202306/analysis/peaks/shNT_plusCL_H3K4me3.rep1/shNT_plusCL_H3K4me3.rep1_treat_pileup.bw \
+                            /temp_work/ch228298/ChIP_202306/analysis/peaks/shNT_plusCL_H3K4me3.rep1/shNT_plusCL_H3K4me3.rep1_treat_pileup.bw \
+                             -R $bed -a 2000 -b 2000 \
+                             --outFileName ${bed}_K27_K4.mat.gz --numberOfProcessors 16
+
+
+samples:
+  minusCL_FSK_input:
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/1_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/1_R2_001.fastq.gz
+  minusCL_FSK_H2AZ:  
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/2_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/2_R2_001.fastq.gz
+  minusCL_FSK_H3K27ac:  
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/3_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/3_R2_001.fastq.gz
+  minus_FSK_H3K4me3:  
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/4_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/4_R2_001.fastq.gz
+  plusCL_FSK_input:  
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/5_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/5_R2_001.fastq.gz
+  plusCL_FSK_H2AZ:  
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/6_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/6_R2_001.fastq.gz
+  plusCL_FSK_H3K27ac:  
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/7_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/7_R2_001.fastq.gz
+  plusCL_FSK_H3K4me3:  
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/8_R1_001.fastq.gz
+    - /lab-share/Cardio-Chen-e2/Public/rongbinzheng/DataProcess/H2AZ_human/30-962665206/00_fastq/8_R2_001.fastq.gz
+    
+minusCL_FSK_H2A.Z,minusCL_FSK_H2A.Z,minusCL_FSK_input,,
+minusCL_FSK_H3K27ac,minusCL_FSK_H3K27ac,minusCL_FSK_input,,
+minusCL_FSK_H3K4me3,minusCL_FSK_H3K4me3,minusCL_FSK_input,,
+plusCL_FSK_H2A.Z,plusCL_FSK_H2A.Z,plusCL_FSK_input,,
+plusCL_FSK_H3K27ac,plusCL_FSK_H3K27ac,plusCL_FSK_input,,
+plusCL_FSK_H3K4me3,plusCL_FSK_H3K4me3,plusCL_FSK_input,,
+
+
+r=5000
+for i in 1 2 3 4
+do
+    rclone copy -P google-drive:"TsengLab/Shared/H2AZ_BrownAdipo/MicroC_Analysis_2023/shNT_plusCL_rep"${i}"/shNT_plusCL_rep"${i}".pairs.mapq5.pairs_"${r}".cool" .
+    rclone copy -P google-drive:"TsengLab/Shared/H2AZ_BrownAdipo/MicroC_Analysis_2023/shNT_minusCL_rep"${i}"/shNT_minusCL_rep"${i}".pairs.mapq5.pairs_"${r}".cool" .
+    rclone copy -P google-drive:"TsengLab/Shared/H2AZ_BrownAdipo/MicroC_Analysis_2023/KD_plusCL_rep"${i}"/KD_plusCL_rep"${i}".pairs.mapq5.pairs_"${r}".cool" .
+done
+
+
+
+bamCoverage --outFileName plusCL_H2AZ_rep1.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20220408_H2AZ_ChIP_Yang/analysis/H2AZ_2022_1st/analysis/align/H2AZ_CL/H2AZ_CL_unique.sorted.bam
+bamCoverage --outFileName plusCL_IgG_rep1.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20220408_H2AZ_ChIP_Yang/analysis/H2AZ_2022_1st/analysis/align/IgG_CL/IgG_CL_unique.sorted.bam
+bamCoverage --outFileName plusCL_H2AZ_rep2.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20220408_H2AZ_ChIP_Yang/analysis/H2AZ_2022_2st/analysis/align/H2AZ_CL/H2AZ_CL_unique.sorted.bam
+bamCoverage --outFileName plusCL_IgG_rep2.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20220408_H2AZ_ChIP_Yang/analysis/H2AZ_2022_2st/analysis/align/IgG_CL/IgG_CL_unique.sorted.bam
+bamCoverage --outFileName plusCL_H2AZ_rep3.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20220408_H2AZ_ChIP_Yang/analysis/H2AZ_2022_3st/analysis/align/H2AZ_CL/H2AZ_CL_unique.sorted.bam
+bamCoverage --outFileName plusCL_IgG_rep3.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20220408_H2AZ_ChIP_Yang/analysis/H2AZ_2022_3st/analysis/align/IgG_CL/IgG_CL_unique.sorted.bam
+
+
+bamCoverage --outFileName minusCL_H3K27ac.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230428_ChIPseq_Day11/processed/analysis/align/H3K27ac_minusCL/H3K27ac_minusCL_unique.sorted.bam
+bamCoverage --outFileName plusCL_H3K27ac.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230428_ChIPseq_Day11/processed/analysis/align/H3K27ac_plusCL/H3K27ac_plusCL_unique.sorted.bam
+bamCoverage --outFileName minusCL_H3K4me3.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230428_ChIPseq_Day11/processed/analysis/align/H3K4me3_minusCL/H3K4me3_minusCL_unique.sorted.bam
+bamCoverage --outFileName plusCL_H3K4me3.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230428_ChIPseq_Day11/processed/analysis/align/H3K4me3_plusCL/H3K4me3_plusCL_unique.sorted.bam
+
+bamCoverage --outFileName minusCL_IgG.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230428_ChIPseq_Day11/processed/analysis/align/IgG_minusCL/IgG_minusCL_unique.sorted.bam
+bamCoverage --outFileName plusCL_IgG.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230428_ChIPseq_Day11/processed/analysis/align/IgG_plusCL/IgG_plusCL_unique.sorted.bam
+bamCoverage --outFileName minusCL_Input.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230428_ChIPseq_Day11/processed/analysis/align/Input_minusCL/Input_minusCL_unique.sorted.bam
+bamCoverage --outFileName plusCL_Input.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230428_ChIPseq_Day11/processed/analysis/align/Input_plusCL/Input_plusCL_unique.sorted.bam
+
+bamCoverage --outFileName shNT_plusCL_H3K27ac_rep1.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230616_ChIP_H2AZ_Histone/processed/analysis/align/shNT_plusCL_H3K27ac_rep1/shNT_plusCL_H3K27ac_rep1_unique.sorted.bam
+bamCoverage --outFileName shNT_plusCL_H3K27ac_rep2.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230616_ChIP_H2AZ_Histone/processed/analysis/align/shNT_plusCL_H3K27ac_rep2/shNT_plusCL_H3K27ac_rep2_unique.sorted.bam
+bamCoverage --outFileName shNT_plusCL_H3K4me3_rep1.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230616_ChIP_H2AZ_Histone/processed/analysis/align/shNT_plusCL_H3K4me3_rep1/shNT_plusCL_H3K4me3_rep1_unique.sorted.bam
+bamCoverage --outFileName shNT_plusCL_H3K4me3_rep2.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230616_ChIP_H2AZ_Histone/processed/analysis/align/shNT_plusCL_H3K4me3_rep2/shNT_plusCL_H3K4me3_rep2_unique.sorted.bam
+bamCoverage --outFileName KD_plusCL_H3K27ac_rep1.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230616_ChIP_H2AZ_Histone/processed/analysis/align/KD_plusCL_H3K27ac_rep1/KD_plusCL_H3K27ac_rep1_unique.sorted.bam
+bamCoverage --outFileName KD_plusCL_H3K27ac_rep2.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230616_ChIP_H2AZ_Histone/processed/analysis/align/KD_plusCL_H3K27ac_rep2/KD_plusCL_H3K27ac_rep2_unique.sorted.bam
+bamCoverage --outFileName KD_plusCL_H3K4me3_rep1.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230616_ChIP_H2AZ_Histone/processed/analysis/align/KD_plusCL_H3K4me3_rep1/KD_plusCL_H3K4me3_rep1_unique.sorted.bam
+bamCoverage --outFileName KD_plusCL_H3K4me3_rep2.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230616_ChIP_H2AZ_Histone/processed/analysis/align/KD_plusCL_H3K4me3_rep2/KD_plusCL_H3K4me3_rep2_unique.sorted.bam
+bamCoverage --outFileName KD_plusCL_IgG.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230616_ChIP_H2AZ_Histone/processed/analysis/align/KD_plusCL_IgG/KD_plusCL_IgG_unique.sorted.bam
+bamCoverage --outFileName shNT_plusCL_IgG.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230616_ChIP_H2AZ_Histone/processed/analysis/align/shNT_plusCL_IgG/shNT_plusCL_IgG_unique.sorted.bam
+
+
+bamCoverage --outFileName KD_plusCL_ATAC_rep2.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20221209_MicroC_ATAC_Yang/20221209_ATAC1rep/analysis/align/KD_plusCL_ATAC/KD_plusCL_ATAC_unique.sorted.bam
+bamCoverage --outFileName shNT_plusCL_ATAC_rep2.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20221209_MicroC_ATAC_Yang/20221209_ATAC1rep/analysis/align/shNT_plusCL_ATAC/shNT_plusCL_ATAC_unique.sorted.bam
+bamCoverage --outFileName shNT_minusCL_ATAC_rep2.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20221209_MicroC_ATAC_Yang/20221209_ATAC1rep/analysis/align/shNT_minusCL_ATAC/shNT_minusCL_ATAC_unique.sorted.bam
+
+bamCoverage --outFileName KD_plusCL_ATAC_rep1.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230106_0107_ATACseq_Fastq_regenerated/processed/analysis/align/KD_plusCL_rep2/KD_plusCL_rep2_unique.sorted.bam
+bamCoverage --outFileName shNT_minusCL_ATAC_rep1.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230106_0107_ATACseq_Fastq_regenerated/processed/analysis/align/shNT_minusCL_rep2/shNT_minusCL_rep2_unique.sorted.bam
+bamCoverage --outFileName shNT_plusCL_ATAC_rep1.bw --outFileFormat bigwig --normalizeUsing CPM --numberOfProcessors 12 --bam 20230106_0107_ATACseq_Fastq_regenerated/processed/analysis/align/shNT_plusCL_rep2/shNT_plusCL_rep2_unique.sorted.bam
+
+mv KD_plusCL_rep1.R1.fq.gz KD_plusCL_MicroC_rep1.R1.fq.gz
+mv KD_plusCL_rep1.R2.fq.gz KD_plusCL_MicroC_rep1.R2.fq.gz
+mv KD_plusCL_rep2.R1.fq.gz KD_plusCL_MicroC_rep2.R1.fq.gz
+mv KD_plusCL_rep2.R2.fq.gz KD_plusCL_MicroC_rep2.R2.fq.gz
+mv KD_plusCL_rep3.R1.fq.gz KD_plusCL_MicroC_rep3.R1.fq.gz
+mv KD_plusCL_rep3.R2.fq.gz KD_plusCL_MicroC_rep3.R2.fq.gz
+mv KD_plusCL_rep4.R1.fq.gz KD_plusCL_MicroC_rep4.R1.fq.gz
+mv KD_plusCL_rep4.R2.fq.gz KD_plusCL_MicroC_rep4.R2.fq.gz
+
+mv MicroC-10_S3.R1.fq.gz shNT_plusCL_MicroC_rep3.R1.fq.gz
+mv MicroC-10_S3.R2.fq.gz shNT_plusCL_MicroC_rep3.R2.fq.gz
+mv MicroC-14_S2.R1.fq.gz shNT_plusCL_MicroC_rep4.R1.fq.gz
+mv MicroC-14_S2.R2.fq.gz shNT_plusCL_MicroC_rep4.R2.fq.gz
+mv MicroC-2_S1.R1.fq.gz shNT_plusCL_MicroC_rep1.R1.fq.gz
+mv MicroC-2_S1.R2.fq.gz shNT_plusCL_MicroC_rep1.R2.fq.gz
+mv MicroC-6_S2.R1.fq.gz shNT_plusCL_MicroC_rep2.R1.fq.gz
+mv MicroC-6_S2.R2.fq.gz shNT_plusCL_MicroC_rep2.R2.fq.gz
+mv MicroC-13_S1.R1.fq.gz shNT_minusCL_MicroC_rep4.R1.fq.gz
+mv MicroC-13_S1.R2.fq.gz shNT_minusCL_MicroC_rep4.R2.fq.gz
+mv MicroC-9_S1.R1.fq.gz shNT_minusCL_MicroC_rep3.R1.fq.gz
+mv MicroC-9_S1.R2.fq.gz shNT_minusCL_MicroC_rep3.R2.fq.gz
+mv shNT-minusCL-rep1_S1.R1.fq.gz shNT_minusCL_MicroC_rep1.R1.fq.gz
+mv shNT-minusCL-rep1_S1.R2.fq.gz shNT_minusCL_MicroC_rep1.R2.fq.gz
+mv shNT-minusCL-rep2_S2.R1.fq.gz shNT_minusCL_MicroC_rep2.R1.fq.gz
+mv shNT-minusCL-rep2_S2.R2.fq.gz shNT_minusCL_MicroC_rep2.R2.fq.gz
+
+
+mv KD_plusCL_rep3.R1.fq.gz KD_plusCL_MicroC_pilot_rep3.R1.fq.gz
+mv KD_plusCL_rep3.R2.fq.gz KD_plusCL_MicroC_pilot_rep3.R2.fq.gz
+mv KD_plusCL_rep4.R1.fq.gz KD_plusCL_MicroC_pilot_rep4.R1.fq.gz
+mv KD_plusCL_rep4.R2.fq.gz KD_plusCL_MicroC_pilot_rep4.R2.fq.gz
+mv shNT_minusCL_rep3.R1.fq.gz shNT_minusCL_MicroC_pilot_rep3.R1.fq.gz
+mv shNT_minusCL_rep3.R2.fq.gz shNT_minusCL_MicroC_pilot_rep3.R2.fq.gz
+mv shNT_minusCL_rep4.R1.fq.gz shNT_minusCL_MicroC_pilot_rep4.R1.fq.gz
+mv shNT_minusCL_rep4.R2.fq.gz shNT_minusCL_MicroC_pilot_rep4.R2.fq.gz
+mv shNT_plusCL_rep3.R1.fq.gz shNT_plusCL_MicroC_pilot_rep3.R1.fq.gz
+mv shNT_plusCL_rep3.R2.fq.gz shNT_plusCL_MicroC_pilot_rep3.R2.fq.gz
+mv shNT_plusCL_rep4.R1.fq.gz shNT_plusCL_MicroC_pilot_rep4.R1.fq.gz
+mv shNT_plusCL_rep4.R2.fq.gz shNT_plusCL_MicroC_pilot_rep4.R2.fq.gz
+
+
+mv KD-CL-H3K27ac-rep1_S4_R1.fq.gz KD_plusCL_H3K27ac_rep1.R1.fq.gz 
+mv KD-CL-H3K27ac-rep1_S4_R2.fq.gz KD_plusCL_H3K27ac_rep1.R2.fq.gz 
+mv KD-CL-H3K27ac-rep2_S14_R1.fq.gz KD_plusCL_H3K27ac_rep2.R1.fq.gz 
+mv KD-CL-H3K27ac-rep2_S14_R2.fq.gz KD_plusCL_H3K27ac_rep2.R2.fq.gz 
+mv KD-CL-H3K4me3-rep1_S6_R1.fq.gz KD_plusCL_H3K4me3_rep1.R1.fq.gz 
+mv KD-CL-H3K4me3-rep1_S6_R2.fq.gz KD_plusCL_H3K4me3_rep1.R2.fq.gz 
+mv KD-CL-H3K4me3-rep2_S16_R1.fq.gz KD_plusCL_H3K4me3_rep2.R1.fq.gz 
+mv KD-CL-H3K4me3-rep2_S16_R2.fq.gz KD_plusCL_H3K4me3_rep2.R2.fq.gz 
+mv KD-CL-IgG_S8_R1.fq.gz KD_plusCL_IgG.R1.fq.gz 
+mv KD-CL-IgG_S8_R2.fq.gz KD_plusCL_IgG.R2.fq.gz 
+mv NT-CL-H3K27ac-rep1_S3_R1.fq.gz shNT_plusCL_H3K27ac_rep1.R1.fq.gz 
+mv NT-CL-H3K27ac-rep1_S3_R2.fq.gz shNT_plusCL_H3K27ac_rep1.R2.fq.gz 
+mv NT-CL-H3K27ac-rep2_S13_R1.fq.gz shNT_plusCL_H3K27ac_rep2.R1.fq.gz 
+mv NT-CL-H3K27ac-rep2_S13_R2.fq.gz shNT_plusCL_H3K27ac_rep2.R2.fq.gz 
+mv NT-CL-H3K4me3-rep1_S5_R1.fq.gz shNT_plusCL_H3K4me3_rep1.R1.fq.gz 
+mv NT-CL-H3K4me3-rep1_S5_R2.fq.gz shNT_plusCL_H3K4me3_rep1.R2.fq.gz 
+mv NT-CL-H3K4me3-rep2_S15_R1.fq.gz shNT_plusCL_H3K4me3_rep2.R1.fq.gz 
+mv NT-CL-H3K4me3-rep2_S15_R2.fq.gz shNT_plusCL_H3K4me3_rep2.R2.fq.gz 
+mv NT-CL-IgG_S7_R1.fq.gz shNT_plusCL_IgG.R1.fq.gz 
+mv NT-CL-IgG_S7_R2.fq.gz shNT_plusCL_IgG.R2.fq.gz 
+
+
+mv ChIP_04082022_H2AZ_minusCL_unique_rep1.sorted.bam.dedup.bgsub.Fnor.peaks.xls minusCL_H2AZ_rep1_peaks.xls
+mv ChIP_04082022_H2AZ_minusCL_unique_rep2.sorted.bam.dedup.bgsub.Fnor.peaks.xls minusCL_H2AZ_rep2_peaks.xls
+mv ChIP_04082022_H2AZ_minusCL_unique_rep3.sorted.bam.dedup.bgsub.Fnor.peaks.xls minusCL_H2AZ_rep3_peaks.xls
+mv ChIP_04082022_H2AZ_plusCL_unique_rep1.sorted.bam.dedup.bgsub.Fnor.peaks.xls plusCL_H2AZ_rep1_peaks.xls
+mv ChIP_04082022_H2AZ_plusCL_unique_rep2.sorted.bam.dedup.bgsub.Fnor.peaks.xls plusCL_H2AZ_rep2_peaks.xls
+mv ChIP_04082022_H2AZ_plusCL_unique_rep3.sorted.bam.dedup.bgsub.Fnor.peaks.xls plusCL_H2AZ_rep3_peaks.xls
+
+
+
+
+
+
 
 
 
