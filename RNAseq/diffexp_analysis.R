@@ -31,8 +31,8 @@ option_list <- list(
               help="only protein coding, the gene annotation file, gene_name as column to notify the gene name"),
     make_option(c("-k", "--kegg"), type = "character", default=FALSE,
               help="the rds path for kegg gene list for fgsea enrichment"),
-    make_option(c("-r", "--Replicate"), type = "character", default=FALSE,
-              help="True or False, True for correcting replicates in DESeq2, make sure sample name ends with _rep1, _rep2, .etc")
+    make_option(c("-b", "--batch"), type = "character", default=FALSE,
+              help="csv file for batch matrix, two columns, first columns for sample name, second column for labels for batches, e.g. 1, 1, 2, 2")
 )
 
 opt_parser <- OptionParser(option_list=option_list)
@@ -47,7 +47,8 @@ species <- opt$species
 go <- opt$gene_ont
 gsea <- opt$gsea
 kegg_path = opt$kegg
-Replicate = opt$Replicate
+batch = opt$batch
+
 
 if (species == 'hsa'){
     db = org.Hs.eg.db
@@ -75,21 +76,21 @@ enrichment_analysis <- function(geneset, background = 'all', species = 'hsa'){
         GO[[k]] = enrichGO(gene = geneset, OrgDb = db, pvalueCutoff = 1, qvalueCutoff = 1, ont = k, universe = background_genes, keyType = 'SYMBOL')
       }
     }
-
-    ## KEGG
-    gene_map = bitr(geneset, fromType='SYMBOL', toType='ENTREZID', OrgDb=db, drop = TRUE)
-    rownames(gene_map) = as.character(gene_map[,2])
-    geneid = as.vector(gene_map[,2])
-    print(head(geneid))
-    print('KEGG')
-    if (background == 'all'){
-        kegg_res = enrichKEGG(gene = geneid, organism=species, keyType='kegg', pvalueCutoff = 1, qvalueCutoff = 1)
-      }else{
-        background_genes = as.vector(read.csv(background, header = F, sep = '\t')[,1])
-        kegg_res = enrichKEGG(gene = geneid, organism=species, keyType='kegg', pvalueCutoff = 1, qvalueCutoff = 1, universe = background_genes)
-     }
-     GO[['KEGG']] = kegg_res
-     return(list('gene_map'=gene_map, 'go'=GO))
+    # ## KEGG
+    # gene_map = bitr(geneset, fromType='SYMBOL', toType='ENTREZID', OrgDb=db, drop = TRUE)
+    # rownames(gene_map) = as.character(gene_map[,2])
+    # geneid = as.vector(gene_map[,2])
+    # print(head(geneid))
+    # print('KEGG')
+    # if (background == 'all'){
+    #     kegg_res = enrichKEGG(gene = geneid, organism=species, keyType='kegg', pvalueCutoff = 1, qvalueCutoff = 1)
+    #   }else{
+    #     background_genes = as.vector(read.csv(background, header = F, sep = '\t')[,1])
+    #     kegg_res = enrichKEGG(gene = geneid, organism=species, keyType='kegg', pvalueCutoff = 1, qvalueCutoff = 1, universe = background_genes)
+    #  }
+    #  GO[['KEGG']] = kegg_res
+     # return(list('gene_map'=gene_map, 'go'=GO))
+     return(list('go'=GO))
 }
 
 ## plot GO
@@ -101,8 +102,8 @@ plot_go <- function(GO, label, prefix){
     print(g)
     g = enrichplot::dotplot(GO[['CC']], showCategory = 20, title = paste0(label, '_CC'))
     print(g)
-    g = enrichplot::dotplot(GO[['KEGG']], showCategory = 20, title = paste0(label, '_KEGG'))
-    print(g)
+    # g = enrichplot::dotplot(GO[['KEGG']], showCategory = 20, title = paste0(label, '_KEGG'))
+    # print(g)
     dev.off()
 }
 
@@ -145,10 +146,18 @@ print('++++ read in')
 
 ## ======== read count
 cmat <- read.csv(count_path, row.names = 1)
-if (tpm_path != NULL & tpm_path != FALSE){
+design <- read.csv(design_path, row.names = 1)
+
+print(tpm_path)
+#if (tpm_path != NULL & tpm_path != FALSE){
+if (is.character(tpm_path)){
 tpm <- read.csv(tpm_path, row.names = 1)
+tpm = tpm[,colnames(design)]
 }
 design <- read.csv(design_path, row.names = 1)
+
+cmat = cmat[,colnames(design)]
+
 ## extract comparison
 comparisons <- lapply(rownames(design), function(x){
     res = t(design)[,x]
@@ -158,7 +167,8 @@ names(comparisons) <- rownames(design)
 
 ### do PCA and hclust
 print('++++ PCA and hcluster ++++')
-if (tpm_path != NULL & tpm_path != FALSE){
+#if (tpm_path != NULL & tpm_path != FALSE){
+if (is.character(tpm_path)){
     tpm.log = log10(tpm+1)
 }else{
     tpm.log = log10(cmat+1)
@@ -187,17 +197,28 @@ g = ggplot(data = plot_df, aes(x = PC1, y = PC2))+
         xlab(paste0('PC1 (', round(imp[2,'PC1']*100, 2), '%)'))+
         ylab(paste0('PC2 (', round(imp[2,'PC2']*100, 2), '%)'))
 
-pdf(paste0(prefix, '_pca.pdf'), width = 5, height = 4.5)
+pdf(paste0(prefix, '_pca.pdf'), width = 15, height = 14.5)
 print(g)
 dev.off()
 
 ## hclust
-pdf(paste0(prefix, '_hclust.pdf'), width = 5, height = 4.5)
+pdf(paste0(prefix, '_hclust.pdf'), width = 10, height = 6.5)
 plot(hclust(dist(t(tpm.log))))
 dev.off()
 ## top variable gene heatmap
-pdf(paste0(prefix, '_heatmap.pdf'), width = 5, height = 5.5)
-Heatmap(tpm.log.scale.var, show_row_names = F, name='Scaled Exp', show_row_dend = T)
+pdf(paste0(prefix, '_heatmap.pdf'), width = 15, height = 15.5)
+Heatmap(tpm.log.scale.var, show_row_names = F, name='Scaled Exp', show_row_dend = T,
+row_names_gp = gpar(fontsize = 8),                # smaller row text
+  column_names_gp = gpar(fontsize = 8),             # smaller column text
+  column_names_rot = 45)
+dev.off()
+
+## sample-sample corr
+pdf(paste0(prefix, '_corr_heatmap.pdf'), width = 15, height = 15.5)
+Heatmap(cor(tpm.log), name='Corr', show_row_dend = T,
+	row_names_gp = gpar(fontsize = 8),                # smaller row text
+  column_names_gp = gpar(fontsize = 8),             # smaller column text
+  column_names_rot = 45)
 dev.off()
 
 ### do each DESeq2
@@ -209,12 +230,16 @@ for (comp in names(comparisons)) {
         vocano_plot(mat=diffexp_res, prefix = paste0(prefix, '_', comp, '_allgene'))
         next
     }
-    if (Replicate == 'True'){
+    if (file.exists(batch) == TRUE){
+        batch_mat = read.csv(batch, header = F, row.names = 1)
+        batches = as.vector(batch_mat$V2)
+        names(batches) = rownames(batch_mat)
         samples <- names(comparisons[[comp]])
-        cond = DataFrame('cond'=comparisons[[comp]], 'Replicate'=sapply(samples, function(x) tail(strsplit(x, '\\_')[[1]], 1)))
+        # cond = DataFrame('cond'=comparisons[[comp]], 'Replicate'=sapply(samples, function(x) tail(strsplit(x, '\\_')[[1]], 1)))
+        cond = DataFrame('cond'=comparisons[[comp]], 'batch'=batches[samples])
         tmp_count <- cmat[,samples]
         dds <- DESeqDataSetFromMatrix(tmp_count,
-                                    cond, ~ Replicate+cond)
+                                    cond, ~ batch+cond)
     }else{
         cond = DataFrame('cond'=comparisons[[comp]])
         samples <- names(comparisons[[comp]])
@@ -299,11 +324,11 @@ if (go == 'True'){
             ## KEGG entrezid to gene name
             for (k in names(up_go_res[['go']])){
                 res = as.data.frame(up_go_res[['go']][[k]])
-                if (k == 'KEGG'){
-                    gene_map = up_go_res$gene_map
-                    rownames(gene_map) = as.character(gene_map[,2])
-                    res$geneID = sapply(as.vector(res$geneID), function(x){paste0(gene_map[strsplit(x, '\\/')[[1]], 'SYMBOL'], collapse = '/')})
-                }
+                # if (k == 'KEGG'){
+                #     gene_map = up_go_res$gene_map
+                #     rownames(gene_map) = as.character(gene_map[,2])
+                #     res$geneID = sapply(as.vector(res$geneID), function(x){paste0(gene_map[strsplit(x, '\\/')[[1]], 'SYMBOL'], collapse = '/')})
+                # }
                 write.csv(res, file = paste0(prefix, '_', comp, '.UP.', k, '.csv'), quote = F)
                 rm(res)
             }
@@ -325,11 +350,11 @@ if (go == 'True'){
             ## KEGG entrezid to gene name
             for (k in names(down_go_res[['go']])){
                 res = as.data.frame(down_go_res[['go']][[k]])
-                if (k == 'KEGG'){
-                    gene_map = down_go_res$gene_map
-                    rownames(gene_map) = as.character(gene_map[,2])
-                    res$geneID = sapply(as.vector(res$geneID), function(x){paste0(gene_map[strsplit(x, '\\/')[[1]], 'SYMBOL'], collapse = '/')})
-                }
+                # if (k == 'KEGG'){
+                #     gene_map = down_go_res$gene_map
+                #     rownames(gene_map) = as.character(gene_map[,2])
+                #     res$geneID = sapply(as.vector(res$geneID), function(x){paste0(gene_map[strsplit(x, '\\/')[[1]], 'SYMBOL'], collapse = '/')})
+                # }
                 write.csv(res, file = paste0(prefix, '_', comp, '.DOWN.', k, '.csv'), quote = F)
                 rm(res)
             }
@@ -346,6 +371,7 @@ fgsea_fuc <- function(rank_genes, kegg_gmt_list, prefix){
     fgseaRes$pathway = gsub('KEGG_', '', fgseaRes$pathway)
     fgseaRes = fgseaRes[order(-fgseaRes$NES),]
     plot_df = subset(fgseaRes, padj <= 0.1)
+    saveRDS(fgseaRes, file = paste0(prefix, '_fgseaRes.rds'))
     g = ggplot(plot_df, aes(x = NES, y = reorder(pathway, NES), colour=padj, size = size))+
         geom_count()+
         geom_point(shape = 1, color = 'black')+
@@ -356,8 +382,7 @@ fgsea_fuc <- function(rank_genes, kegg_gmt_list, prefix){
                        panel.border = element_blank(),axis.line = element_line(colour = "black"),
                        text=element_text(size=10, colour = "black"),
                        legend.text=element_text(size=10),
-                       plot.title = element_text(hjust=0.5,vjust = 0.5,
-                                                 margin = margin(l=100,r=50,t=10,b=10),face = "bold", colour = "black"))+
+                       plot.title = element_text(hjust=0.5,vjust = 0.5,margin = margin(l=100,r=50,t=10,b=10),face = "bold", colour = "black"))+
         scale_colour_gradient2(high = 'grey', low = 'red', limits = c(NA, 0.2), midpoint = 0.1)+
         geom_vline(xintercept = 0, color = 'grey')
     # save out gsea dot plot
@@ -368,55 +393,12 @@ fgsea_fuc <- function(rank_genes, kegg_gmt_list, prefix){
     res = as.matrix(fgseaRes)
     res[,'leadingEdge'] = gsub(',', ';', as.vector(res[,'leadingEdge']))
     write.table(res, file = paste0(prefix, '_fgseaRes.tsv'), quote = F, row.names = F, sep = '\t')   
-    saveRDS(fgseaRes, file = paste0(prefix, '_fgseaRes.rds'))
     return(plot_df)
 }
 
 ### GSEA
 if (gsea == "True"){
-    print('+++++ GSEA')
-    for (comp in names(diff_res$protein_only)){
-        print(comp)
-        diffexp <- diff_res$protein_only[[comp]]
-        diffexp <- subset(diffexp, !is.na(log2FoldChange) & !is.na(padj))
-
-        ### using log2FoldChange
-        gageinput <- as.vector(diffexp$log2FoldChange)
-        names(gageinput) <- as.vector(rownames(diffexp))
-        gageinput <- gageinput[!grepl('^mt-|MT-', names(gageinput))]
-
-        geneid <- bitr(names(gageinput), fromType='SYMBOL', toType='ENTREZID', OrgDb=db, drop = TRUE)
-        rownames(geneid) <- as.character(geneid$ENTREZID)
-
-        gageinput <- gageinput[as.vector(geneid$SYMBOL)]
-        names(gageinput) <- as.vector(geneid$ENTREZID)
-
-        gseainput = sort(gageinput, decreasing=TRUE)
-        gseainput = gseainput[is.finite(gseainput)]
-        print(species)
-        print(length(gseainput))
-        fullgsea <- gseKEGG(geneList = gseainput,
-                        organism= species,
-                        nPerm= 1000,
-                        minGSSize= 50,
-                        maxGSSize = 500,
-                        pvalueCutoff = 0.99,
-                        verbose= FALSE,
-                        use_internal_data = FALSE)
-        ## write out
-        saveRDS(fullgsea, file = paste0(prefix, comp, '.gseaKEGG.rds'))
-        pdf(paste0(prefix, comp, '.gseaKEGG.pdf'), width = 10, height = 8.5)
-        g = dotplot(fullgsea, showCategory = 15, title = "Enriched Pathways" , split=".sign") + facet_grid(.~.sign)
-        print(g)
-        g = ridgeplot(fullgsea) + labs(x = "Enrichment Distribution")
-        print(g)
-        dev.off()
-        gsea_data = as.data.frame(fullgsea)
-        gsea_data$core_enrichment = sapply(as.vector(gsea_data$core_enrichment), function(x){paste0(geneid[strsplit(x, '\\/')[[1]], 'SYMBOL'], collapse = '/')})
-        gsea_data = gsea_data[order(-abs(gsea_data$NES)),]
-        gsea_data[,2] = gsub(",", "", as.matrix(gsea_data[,2]))
-        write.csv(gsea_data, file = paste0(prefix, '_', comp, '.gseaKEGG.csv'))
-    }
+    print('+++++ fGSEA')
     ## fgsea
     if (kegg_path != FALSE){
         kegg_gmt_list = readRDS(kegg_path) # GSEA reference
@@ -431,11 +413,54 @@ if (gsea == "True"){
             names(gageinput) <- as.vector(rownames(diffexp))
             gageinput <- gageinput[!grepl('^mt-|MT-', names(gageinput))]
 
-            fgsea_res = fgsea_fuc(rank_genes=gageinput, 
-                            kegg_gmt_list=kegg_gmt_list, 
+            fgsea_res = fgsea_fuc(rank_genes=gageinput,
+                            kegg_gmt_list=kegg_gmt_list,
                             prefix=paste0(prefix, '_', comp))
         }
     }
+    # print('+++++ keggGSEA')
+    # for (comp in names(diff_res$protein_only)){
+    #     print(comp)
+    #     diffexp <- diff_res$protein_only[[comp]]
+    #     diffexp <- subset(diffexp, !is.na(log2FoldChange) & !is.na(padj))
+
+    #     ### using log2FoldChange
+    #     gageinput <- as.vector(diffexp$log2FoldChange)
+    #     names(gageinput) <- as.vector(rownames(diffexp))
+    #     gageinput <- gageinput[!grepl('^mt-|MT-', names(gageinput))]
+
+    #     geneid <- bitr(names(gageinput), fromType='SYMBOL', toType='ENTREZID', OrgDb=db, drop = TRUE)
+    #     rownames(geneid) <- as.character(geneid$ENTREZID)
+
+    #     gageinput <- gageinput[as.vector(geneid$SYMBOL)]
+    #     names(gageinput) <- as.vector(geneid$ENTREZID)
+
+    #     gseainput = sort(gageinput, decreasing=TRUE)
+    #     gseainput = gseainput[is.finite(gseainput)]
+    #     print(species)
+    #     print(length(gseainput))
+    #     fullgsea <- gseKEGG(geneList = gseainput,
+    #                     organism= species,
+    #                     nPerm= 1000,
+    #                     minGSSize= 50,
+    #                     maxGSSize = 500,
+    #                     pvalueCutoff = 0.99,
+    #                     verbose= FALSE,
+    #                     use_internal_data = FALSE)
+    #     ## write out
+    #     saveRDS(fullgsea, file = paste0(prefix, comp, '.gseaKEGG.rds'))
+    #     pdf(paste0(prefix, comp, '.gseaKEGG.pdf'), width = 10, height = 8.5)
+    #     g = dotplot(fullgsea, showCategory = 15, title = "Enriched Pathways" , split=".sign") + facet_grid(.~.sign)
+    #     print(g)
+    #     g = ridgeplot(fullgsea) + labs(x = "Enrichment Distribution")
+    #     print(g)
+    #     dev.off()
+    #     gsea_data = as.data.frame(fullgsea)
+    #     gsea_data$core_enrichment = sapply(as.vector(gsea_data$core_enrichment), function(x){paste0(geneid[strsplit(x, '\\/')[[1]], 'SYMBOL'], collapse = '/')})
+    #     gsea_data = gsea_data[order(-abs(gsea_data$NES)),]
+    #     gsea_data[,2] = gsub(",", "", as.matrix(gsea_data[,2]))
+    #     write.csv(gsea_data, file = paste0(prefix, '_', comp, '.gseaKEGG.csv'))
+    # }
 }
 
 print('++++++ Finished +++++++')

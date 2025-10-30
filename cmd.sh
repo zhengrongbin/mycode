@@ -22,6 +22,9 @@ docker run -it --name seurat -p 8081:8081 -v /Users/rongbinzheng/Documents:/User
 ## for MECOM
 docker run -it --name MECOM -p 8880:8880 -v /Users/rongbinzheng/Documents/BCH/ChenLab:/home/ChenLab -v /Users/rongbinzheng/Documents/CommonData:/home/CommonData seurat:v2.0.1
 
+srun -A cbp -p bch-gpu-pe --qos=normal --gpus=1 --gpus-per-node=1 --mem=30G --pty /bin/bash 
+jupyter notebook --no-browser --port 8909 --NotebookApp.iopub_data_rate_limit=10000000000 --ip=0.0.0.0 --NotebookApp.allow_origin=* --allow-root
+
 ## for compass
 docker run -it --name compass -p 8889:8889 -v /Users/rongbinzheng/Documents:/Users/rongbinzheng/Documents  compass:latest
 jupyter notebook --allow-root --port=8889 --no-browser --ip=0.0.0.0 
@@ -34,9 +37,9 @@ jupyter notebook --allow-root --port=8080 --no-browser --ip=0.0.0.0
 remotes::install_version(package = 'Seurat', version = package_version('2.0.1'))
 
 ## E2
-jupyter notebook --no-browser --port 8990 --NotebookApp.iopub_data_rate_limit=10000000000 --ip=0.0.0.0 --NotebookApp.allow_origin=* --allow-root
+jupyter notebook --no-browser --port 8900 --NotebookApp.iopub_data_rate_limit=10000000000 --ip=0.0.0.0 --NotebookApp.allow_origin=* --allow-root
 
-ssh -N -L 8900:compute-5-0-3.tch.harvard.edu:8900 -o ServerAliveInterval=30 ch228298@e2.tch.harvard.edu
+ssh -N -L 8900:compute-7-0.rc.tch.harvard.edu:8900 -o ServerAliveInterval=30 ch228298@e3-login.tch.harvard.edu
 
 chr8,HAVANA,gene,83290352,83298452,,+,0,ENSMUSG00000031710.4,protein_coding,Ucp1,2,MGI:98894,OTTMUSG00000061515.1,,,,,,,,,,,
 
@@ -1442,11 +1445,156 @@ mv ChIP_04082022_H2AZ_plusCL_unique_rep2.sorted.bam.dedup.bgsub.Fnor.peaks.xls p
 mv ChIP_04082022_H2AZ_plusCL_unique_rep3.sorted.bam.dedup.bgsub.Fnor.peaks.xls plusCL_H2AZ_rep3_peaks.xls
 
 
+for i in 1 2 3 5 6
+do
+rclone copyto -P google-drive:Collaboration/Burns/RNAseq/KO7_rep${i}/analysis/STAR_outputAligned.sortedByCoord.out.bam.bai KO7_rep${i}.bam.bai
+done
+
+for i in 2 5 6
+do
+rclone copyto -P google-drive:Collaboration/Burns/RNAseq/WT_rep${i}/analysis/STAR_outputAligned.sortedByCoord.out.bam.bai WT_rep${i}.bam.bai
+done
 
 
+for i in 1 2 3 4 6
+do
+rclone copyto -P google-drive:Collaboration/Burns/RNAseq/KO21_rep${i}/analysis/STAR_outputAligned.sortedByCoord.out.bam KO21_rep${i}.bam
+done
 
 
+rmatsshi=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/software/rmats2sashimiplot/src/rmats2sashimiplot/rmats2sashimiplot.py
+
+python ${rmatsshi} --b1 WT.txt --b2 KO7.txt --event-type MXE -e ./plot_events/RBFOX2_KO7_vs_WT_MXE.txt --l1 WT --l2 KO7 --exon_s 1 --intron_s 5 -o sashimiplot_MXE_group --group-info grouping.gf
+python ${rmatsshi} --b1 WT.txt --b2 KO7.txt --event-type MXE -e ./plot_events/RBFOX2_KO7_vs_WT_MXE.txt --l1 WT --l2 KO7 --exon_s 1 --intron_s 5 -o sashimiplot_MXE --fig-height 12
+
+python ${rmatsshi} --b1 WT.txt --b2 KO7.txt --event-type SE -e ./plot_events/RBFOX2_KO7_vs_WT_SE.txt --l1 WT --l2 KO7 --exon_s 1 --intron_s 5 -o sashimiplot_SE_group --group-info grouping.gf
+python ${rmatsshi} --b1 WT.txt --b2 KO7.txt --event-type SE -e ./plot_events/RBFOX2_KO7_vs_WT_SE.txt --l1 WT --l2 KO7 --exon_s 1 --intron_s 5 -o sashimiplot_SE --fig-height 12
+
+fq1=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/00_fastq/1_R1_001.fastq.gz
+fq2=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/00_fastq/1_R2_001.fastq.gz
+ad=ACGGACTT
+n=NT_minusCL_bisox
+out=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/trimed_fq
+trim_galore --paired --dont_gzip -o $out --basename $n --fastqc_args '-d ${QC}' -j 8 --adapter $ad $fq1 $fq2
+
+cutadapt --version
+4.8
+
+n=NT_minusCL_bisox
+fq1=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/trimed_fq/${n}_val_1.fq
+fq2=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/trimed_fq/${n}_val_2.fq
+fa=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/software/ref_files/mm10/bwa_indices/mm10.fa
+m10size=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/Genome/mm10/mm10.chromSize
+DISPbind align -i $fa -n $n -a $fq1 -b $fq2 -o processed_out -p 8 -g $m10size
+
+nm=NT_plusCL
+bam1=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/processed_out/${nm}_DMSO.sorted.bam
+bam2=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/processed_out/${nm}_bisox.sorted.bam
+macs2 callpeak --nomodel -B --SPMR -f BAMPE -g mm -t $bam2 -c $bam1 --outdir callpeak/ -n ${nm}_bisox_peaks --broad --keep-dup 1
+
+nm=NT_minusCL
+bam1=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/processed_out/${nm}_DMSO.sorted.bam
+bam2=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/processed_out/${nm}_bisox.sorted.bam
+macs2 callpeak --nomodel -B --SPMR -f BAMPE -g mm -t $bam2 -c $bam1 --outdir callpeak/ -n ${nm}_bisox_peaks --broad --keep-dup 1
+
+nm=KD_minusCL
+bam1=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/processed_out/${nm}_DMSO.sorted.bam
+bam2=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/processed_out/${nm}_bisox.sorted.bam
+macs2 callpeak --nomodel -B --SPMR -f BAMPE -g mm -t $bam2 -c $bam1 --outdir callpeak/ -n ${nm}_bisox_peaks --broad --keep-dup 1
+
+nm=KD_plusCL
+bam1=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/processed_out/${nm}_DMSO.sorted.bam
+bam2=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/processed_out/${nm}_bisox.sorted.bam
+macs2 callpeak --nomodel -B --SPMR -f BAMPE -g mm -t $bam2 -c $bam1 --outdir callpeak/ -n ${nm}_bisox_peaks --broad --keep-dup 1
 
 
+for n in NT_minusCL_DMSO NT_plusCL_bisox NT_plusCL_DMSO KD_minusCL_bisox KD_minusCL_DMSO KD_plusCL_bisox KD_plusCL_DMSO
+do
+    echo '#!/bin/bash' > ${n}_map.sbatch
+    echo '#SBATCH --partition=cbp-compute # queue to be used' >> ${n}_map.sbatch
+    echo '#SBATCH --time=50:00:00 # Running time (in hours-minutes-seconds)' >> ${n}_map.sbatch
+    echo '#SBATCH --job-name=disp # Job name' >> ${n}_map.sbatch
+    echo '#SBATCH --mail-type=BEGIN,END,FAIL # send and email when the job begins, ends or fails' >> ${n}_map.sbatch
+    echo '#SBATCH --mail-user=your_email_address # Email address to send the job status' >> ${n}_map.sbatch
+    echo '#SBATCH --output=output_%A_%a.txt # Name of the output file' >> ${n}_map.sbatch
+    echo '#SBATCH --nodes=1 # Number of compute nodes' >> ${n}_map.sbatch
+    echo '#SBATCH --ntasks=8 # Number of cpu cores on one node' >> ${n}_map.sbatch
+    echo '#SBATCH --mem=30G' >> ${n}_map.sbatch
 
+    echo "echo '++++ activating'" >> ${n}_map.sbatch
+    echo "source /lab-share/Cardio-Chen-e2/Public/rongbinzheng/anaconda3/bin/activate" >> ${n}_map.sbatch
+    echo "conda activate chips" >> ${n}_map.sbatch
+    echo "fq1=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/trimed_fq/${n}_val_1.fq" >> ${n}_map.sbatch
+    echo "fq2=/temp_work/ch228298/Nature_revise_Yang/DisP_seq_062024/trimed_fq/${n}_val_2.fq" >> ${n}_map.sbatch
+    echo "fa=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/software/ref_files/mm10/bwa_indices/mm10.fa" >> ${n}_map.sbatch
+    echo "m10size=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/Genome/mm10/mm10.chromSize" >> ${n}_map.sbatch
+    cmd="DISPbind align -i $fa -n $n -a $fq1 -b $fq2 -o processed_out -p 8 -g $m10size"
+    echo $cmd >> ${n}_map.sbatch
+    echo 'echo "Finished"' >> ${n}_map.sbatch
+done
+
+
+6 genes have insufficient target regions and may have compromised detection efficiency: 
+TNP1
+TUBA3C
+AP002518.2
+CPT1B
+CHKB
+PAOX
+1 gene is untargetable: TPSB2
+
+
+1. setup.py vs. requirements.txt
+2. https://stackoverflow.com/questions/75682385/runtimeerror-cuda-error-no-kernel-image-is-available-for-execution-on-the-devi
+
+#slice_ids = slice_ids[::-1]
+
+args = easydict.EasyDict({})
+args.epochs = 40
+args.lr = 0.001
+args.k = 20
+args.alpha = 0.1 # weight of transcriptional loss
+args.diff_omics = False # whether to use different omics data
+args.mode = 'None' # Choose the mode among 'align', 'stitch' and None
+args.dimension = 2  # choose the dimension of coordinates (2 or 3)
+args.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+src = sc.read_h5ad('src.h5ad')
+tgt = sc.read_h5ad('tgt.h5ad')
+sc.pp.subsample(src, 0.1)
+sc.pp.subsample(tgt, 0.1)
+
+### align adjacent slices by SANTO
+aligned_src_cor, trans_dict = santo(src,tgt, args)
+cor = np.array(src.obsm['spatial'])
+cor_tgt = np.array(tgt.obsm['spatial'])
+cor_new = np.dot(cor, trans_dict['fine_R_ab'].T) + trans_dict['fine_T_ab']
+pcc,ci = evaluation(cor_new,
+                     cor_tgt,
+                     src.X,
+                     tgt.X,
+                     np.array(src.obs.cell_label_updated),
+                     np.array(tgt.obs.cell_label_updated))
+print(f'accuracy: {pcc}, ci: {ci}')
+
+
+res = NULL
+for (r in c('250000', '100000', '50000', '10000')){
+    tmp = list()
+    for (i in paste0('chr', c(as.character(1:19)))){
+        d = readRDS(file = paste0('hicrep_reslu_', r, '_', i, '.rds'))
+        tmp[[i]] = do.call(c, lapply(d, function(x) {x[['scc']]}))
+    }
+    tmp = as.data.frame(do.call(rbind, tmp))
+    tmp$chrom = rownames(tmp)
+    tmp$resolu = rep(r, nrow(tmp))
+    res = rbind(res, tmp)
+}
+write.table(res, file = 'replicates_hicrep_corr_mat.txt', sep = '\t', quote = F)
+
+chromsize=/lab-share/Cardio-Chen-e2/Public/rongbinzheng/Genome/mm10/mm10.chromSize
+for wig in `ls *CTCF_vs_input/pooled/*bgsub.Fnor.wig`
+do
+    /lab-share/Cardio-Chen-e2/Public/rongbinzheng/anaconda3/bin/wigToBigWig -clip ${wig} $chromsize ${wig}.bw
+done
 
